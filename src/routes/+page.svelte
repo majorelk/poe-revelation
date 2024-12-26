@@ -1,44 +1,74 @@
 <script lang="ts">
-  export let data: {
-    headers: any[];
-    rows: { [key: string]: any }[];
-    tableName: string;
-  };
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 
-  $: console.log(data);
+	export let data;
+
+	let selectedVersion = data.selectedVersion || '1';
+
+	function handleVersionChange(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		const version = target.value;
+		goto(`?version=${version}`);
+	}
 </script>
 
-<h1>Table: {data.tableName}</h1>
-<!-- 
-{#if data.headers.length > 0}
-  <h2>Headers</h2>
-  <ul>
-    {#each data.headers as header}
-      <li>{header.name} (Offset: {header.offset}, Length: {header.length})</li>
-    {/each}
-  </ul>
-{/if}
+<!-- <div>
+	<label for="game-version">Select Game Version: </label>
+	<select
+		class="input"
+		id="game-version"
+		bind:value={selectedVersion}
+		on:change={handleVersionChange}
+	>
+		<option value="1">POE 1</option>
+		<option value="2">POE 2</option>
+	</select>
+	<p>Current Patch URL: {data.patchUrl}</p>
+</div>
 
-{#if data.rows.length > 0}
-  <h2>Rows</h2>
-  <table>
-    <thead>
-      <tr>
-        {#each data.headers as header}
-          <th>{header.name}</th>
-        {/each}
-      </tr>
-    </thead>
-    <tbody>
-      {#each data.rows as row}
-        <tr>
-          {#each data.headers as header}
-            <td>{row[header.name]}</td>
-          {/each}
-        </tr>
-      {/each}
-    </tbody>
-  </table>
-{:else}
-  <p>Loading or no data available.</p>
-{/if} -->
+<h1 class="h1">Table: {data.tableName}</h1> -->
+
+<div class="container flex flex-row h-screen">
+	<div class="flex max-h-full overflow-scroll">
+		<!-- Table directory goes here -->
+		{#if data.datFiles.length > 0}
+			<ul>
+				{#each data.datFiles as file}
+					<li>
+						<a href={file.url} target="_blank">{file.name}</a>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p>No .datc64 files found in the directory.</p>
+		{/if}
+	</div>
+
+	{#if data.rows.length > 0}
+		<div class="flex">
+			<div class="table-container">
+				<table class="table table-hover">
+					<thead>
+						<tr>
+							{#each data.headers as header, index}
+								<th>{header.name || `Column_${index}`}</th>
+							{/each}
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.rows as row}
+							<tr>
+								{#each data.headers as header, index}
+									<td class=" max-w-32 overflow-auto">{row[header.name || `Column_${index}`]}</td>
+								{/each}
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	{:else}
+		<p>Loading or no data available.</p>
+	{/if}
+</div>
