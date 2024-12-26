@@ -3,22 +3,6 @@ import { browser } from '$app/environment';
 import { SCHEMA_URL, type SchemaFile, type SchemaTable } from 'pathofexile-dat-schema';
 import type { DatFile, Header } from 'pathofexile-dat/dat.js';
 
-interface Header {
-  name: string | null;
-  offset: number;
-  readonly length: number;
-  type: {
-    byteView?: { array: boolean };
-    array?: boolean;
-    boolean?: Record<any, never>;
-    integer?: { unsigned: boolean; size: number };
-    decimal?: { size: number };
-    string?: Record<any, never>;
-    key?: { foreign: boolean; table: string | null; viewColumn: string | null };
-  };
-  textLength?: number;
-}
-
 interface DatSchema {
   name: string;
   headers: ViewerSerializedHeader[];
@@ -44,7 +28,9 @@ const FIELD_SIZE = {
 };
 
 export const load: PageLoad = async ({ fetch, url }) => {
-  const tableName = undefined;
+  const tableName = url.searchParams.get('table') || undefined;
+  let schemaTableName = '';
+  let table: SchemaTable | null = null;
   let datFile: any = null;
   let schemaFile: SchemaFile | null = null;
   let headers: ViewerSerializedHeader[] = [];
@@ -62,7 +48,12 @@ export const load: PageLoad = async ({ fetch, url }) => {
     } else {
       // Fetch schema file on server
       schemaFile = await fetch('/schema.min.json').then((r) => r.json());
-      const table = schemaFile?.tables.find((t) => t.name === tableName);
+
+      table = schemaFile?.tables.find(
+        (t) => new RegExp(`^${tableName}$`, 'i').test(t.name)
+      ) || null;
+
+      schemaTableName = table?.name || '';
 
       if (!table) {
         throw new Error(`Table ${tableName} not found in schema.`);
@@ -105,9 +96,10 @@ export const load: PageLoad = async ({ fetch, url }) => {
       if (tableName === undefined) {
         // do nothing
       } else {
-
         // Process table data
-        ({ datFile, headers } = await processTableData(tableName, datFiles, fetch, datFile, readDatFile, headers, table, getHeaderLength, readColumn, rows));
+        const result = await processTableData(tableName, datFiles, fetch, datFile, readDatFile, headers, table, getHeaderLength, readColumn, rows);
+        datFile = result.datFile;
+        headers = result.headers;        
       }
     }
   } catch (error) {

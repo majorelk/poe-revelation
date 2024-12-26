@@ -11,9 +11,27 @@
 		const version = target.value;
 		goto(`?version=${version}`);
 	}
+
+  onMount(() => {
+    console.log(data);
+    
+  });
+
+
+	function selectTable(): import("svelte/elements").MouseEventHandler<HTMLAnchorElement> | null | undefined {
+		// set the url param to the selected table
+    return (event) => {
+      const version = selectedVersion;
+      const target = event.target as HTMLAnchorElement;
+      // const table = target.innerText;
+      // without the extension .datc64
+      const table = target.innerText.split('.')[0];
+      goto(`?version=${version}&table=${table}`);
+    };
+	}
 </script>
 
-<!-- <div>
+<div>
 	<label for="game-version">Select Game Version: </label>
 	<select
 		class="input"
@@ -27,7 +45,7 @@
 	<p>Current Patch URL: {data.patchUrl}</p>
 </div>
 
-<h1 class="h1">Table: {data.tableName}</h1> -->
+<h1 class="h1">Table: {data.tableName}</h1>
 
 <div class="container flex flex-row h-screen">
 	<div class="flex max-h-full overflow-scroll">
@@ -36,7 +54,7 @@
 			<ul>
 				{#each data.datFiles as file}
 					<li>
-						<a href={file.url} target="_blank">{file.name}</a>
+						<a on:click={selectTable()}>{file.name}</a>
 					</li>
 				{/each}
 			</ul>
