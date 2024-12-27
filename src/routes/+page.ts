@@ -3,10 +3,10 @@ import { browser } from '$app/environment';
 import { SCHEMA_URL, type SchemaFile, type SchemaTable } from 'pathofexile-dat-schema';
 import type { DatFile, Header } from 'pathofexile-dat/dat.js';
 
-interface DatSchema {
-  name: string;
-  headers: ViewerSerializedHeader[];
-}
+// interface DatSchema {
+//   name: string;
+//   headers: ViewerSerializedHeader[];
+// }
 
 type ViewerSerializedHeader = Omit<Header, 'length'> & { length?: number };
 
@@ -83,15 +83,12 @@ export const load: PageLoad = async ({ fetch, url }) => {
       const fileList = await fetch(indexUrl).then((r) => r.json());
 
 
-      // Filter `.datc64` files and map necessary information
-      datFiles = fileList.files
-        .filter((file: any) => file.extension === 'datc64' && file.type === 'file')
-        .map((file: any) => ({
-          name: file.basename,
-          url: file.url
-        }));
+      datFiles = fileList.files.map((file: any) => ({
+        name: file.basename,
+        url: file.url
+      }));
 
-      console.log(`Filtered .datc64 Files:`, datFiles);
+      // console.log(`Filtered .datc64 Files:`, datFiles);
 
       if (tableName === undefined) {
         // do nothing

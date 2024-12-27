@@ -12,43 +12,46 @@
 		goto(`?version=${version}`);
 	}
 
-  onMount(() => {
-    console.log(data);
-    
-  });
+	onMount(() => {
+		// console.log(data);
+	});
 
-
-	function selectTable(): import("svelte/elements").MouseEventHandler<HTMLAnchorElement> | null | undefined {
+	function selectTable():
+		| import('svelte/elements').MouseEventHandler<HTMLAnchorElement>
+		| null
+		| undefined {
 		// set the url param to the selected table
-    return (event) => {
-      const version = selectedVersion;
-      const target = event.target as HTMLAnchorElement;
-      // const table = target.innerText;
-      // without the extension .datc64
-      const table = target.innerText.split('.')[0];
-      goto(`?version=${version}&table=${table}`);
-    };
+		return (event) => {
+			const version = selectedVersion;
+			const target = event.target as HTMLAnchorElement;
+			// const table = target.innerText;
+			// without the extension .datc64
+			const table = target.innerText.split('.')[0];
+			goto(`?version=${version}&table=${table}`);
+		};
 	}
 </script>
 
-<div>
-	<label for="game-version">Select Game Version: </label>
-	<select
-		class="input"
-		id="game-version"
-		bind:value={selectedVersion}
-		on:change={handleVersionChange}
-	>
-		<option value="1">POE 1</option>
-		<option value="2">POE 2</option>
-	</select>
-	<p>Current Patch URL: {data.patchUrl}</p>
-</div>
-
-<h1 class="h1">Table: {data.tableName}</h1>
-
 <div class="container flex flex-row h-screen">
-	<div class="flex max-h-full overflow-scroll">
+	<div class="flex flex-col max-h-full overflow-scroll">
+		<div class="sticky top-0 bg-secondary-500 p-4">
+			<label for="game-version">Select Game Version: </label>
+			<select
+				class="input"
+				id="game-version"
+				bind:value={selectedVersion}
+				on:change={handleVersionChange}
+			>
+				<option value="1">POE 1</option>
+				<option value="2">POE 2</option>
+			</select>
+			<!-- <p>Current Patch URL: {data.patchUrl}</p> -->
+			<p>Current patch: {data.versionNumber}</p>
+			{#if data.tableName !== undefined}
+				<h3 class="h3 py-4">Selected table: {data.tableName}</h3>
+			{/if}
+		</div>
+
 		<!-- Table directory goes here -->
 		{#if data.datFiles.length > 0}
 			<ul>
