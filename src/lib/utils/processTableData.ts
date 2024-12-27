@@ -27,6 +27,7 @@ async function fromPublicSchema(
       name: column.name || `Column_${index}`,
       type: {
         array: column.array,
+        // @ts-expect-error - we are not handling byteView at the moment
         byteView: column.type === 'array' ? { array: true } : undefined,
         integer: column.type === 'u16' ? { unsigned: true, size: 2 }
           : column.type === 'u32' ? { unsigned: true, size: 4 }
@@ -41,7 +42,7 @@ async function fromPublicSchema(
           foreign: (column.type === 'foreignrow'),
           table: column.references?.table ?? null,
           viewColumn: null
-        } : undefined
+        } as { foreign: boolean; table: string | null; viewColumn: null } : undefined
       },
       textLength: 4 * 3 - 1,
       length: 0,
