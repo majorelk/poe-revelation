@@ -27,7 +27,6 @@ async function fromPublicSchema(
       name: column.name || `Column_${index}`,
       type: {
         array: column.array,
-        // @ts-expect-error - we are not handling byteView at the moment
         byteView: column.type === 'array' ? { array: true } : undefined,
         integer: column.type === 'u16' ? { unsigned: true, size: 2 }
           : column.type === 'u32' ? { unsigned: true, size: 4 }
@@ -66,6 +65,8 @@ async function fromPublicSchema(
 }
 
 // Process table data with schema mapping
+const processedForeignTables = new Set<string>();
+
 export async function processTableData(
   tableName: string,
   datFiles: { name: string; url: string }[],
@@ -75,6 +76,13 @@ export async function processTableData(
   readColumn: (header: ViewerSerializedHeader, datFile: DatFile) => any[],
   table: SchemaTable
 ): Promise<{ datFile: DatFile; headers: ViewerSerializedHeader[]; rows: any[] }> {
+  if (processedForeignTables.has(tableName)) {
+    console.warn(`Skipping already processed foreign table: ${tableName}`);
+    return { datFile: {} as DatFile, headers: [], rows: [] };
+  }
+
+  processedForeignTables.add(tableName);
+
   const fileName = `${tableName.toLowerCase()}.datc64`;
   const targetFile = datFiles.find((file) => file.name === fileName);
 
@@ -94,17 +102,14 @@ export async function processTableData(
     console.log('Processing headers from schema:', table.columns);
 
     headers = await fromPublicSchema(table, getHeaderLength);
-
     console.log('Headers successfully generated:', headers);
 
-    // Extract rows using headers
     for (const header of headers) {
       if (!header.length || header.length === 0) {
         console.warn(`Skipping header with invalid length: ${header.name}`);
-        continue; // Skip invalid headers
+        continue;
       }
 
-      // // log the headers that are foreignrow
       if (header.type?.key?.foreign) {
         console.log('ForeignRow column detected:', header.name, '->', header.type.key);
         foreignTables.push(header);
@@ -116,16 +121,65 @@ export async function processTableData(
         rows[i][header.name || `Column_${i}`] = value;
       });
 
-      // log the rows that are in the foreignrow column
       if (header.type?.key?.foreign) {
-        console.log('ForeignRow values:', column);
-        foreignRows = column;
+        // console.log('ForeignRow values:', column);
+        foreignRows = column.filter((value) => value != null); // Ensure valid rows only
       }
     }
 
+    // Process Foreign Tables
+    for (const foreignHeader of foreignTables) {
+      const foreignTableName = foreignHeader.type?.key?.table;
+
+      if (!foreignTableName || processedForeignTables.has(foreignTableName)) {
+        console.warn(`Skipping invalid or already processed foreign table: ${foreignTableName}`);
+        continue;
+      }
+
+      console.log(`Processing foreign table: ${foreignTableName}`);
+
+      const { rows: foreignTableRows, headers: foreignTableHeaders } = await processTableData(
+        foreignTableName,
+        datFiles,
+        fetch,
+        readDatFile,
+        getHeaderLength,
+        readColumn,
+        table
+      );
+
+      console.log(`Foreign table "${foreignTableName}" loaded with ${foreignTableRows.length} rows.`);
+
+      // Ensure there is at least one header (first column exists)
+      const firstColumnHeader = foreignTableHeaders[0]?.name;
+      if (!firstColumnHeader) {
+        console.warn(`Foreign table "${foreignTableName}" has no valid first column.`);
+        continue;
+      }
+
+      // Map ForeignRows using Index and log the first column's value
+      foreignRows = foreignRows.map((foreignIndex) => {
+        if (foreignIndex < 0 || foreignIndex >= foreignTableRows.length) {
+          console.warn(`Invalid foreign row index "${foreignIndex}" in table "${foreignTableName}".`);
+          return null;
+        }
+
+        const foreignRow = foreignTableRows[foreignIndex];
+        const firstColumnValue = foreignRow[firstColumnHeader];
+
+        console.log(
+          `Foreign table "${foreignTableName}" row ${foreignIndex} - First column "${firstColumnHeader}":`,
+          firstColumnValue
+        );
+
+        return foreignRow;
+      });
+    }
   } catch (error) {
     console.error('Error during table data processing:', error);
     throw error;
+  } finally {
+    processedForeignTables.delete(tableName);
   }
 
   return { datFile, headers, rows };
