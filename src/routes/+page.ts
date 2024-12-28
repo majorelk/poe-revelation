@@ -24,6 +24,13 @@ export const load: PageLoad = async ({ fetch, url }) => {
 
   let foreignTableKeys = [];
   let foreignTableName: string[] = [];
+  // let foreignRows = {
+  //   tableName: '',
+  //   rows: []
+  // }
+
+  // foreignrows should be a set for each foreign table
+  let foreignRows = new Map<string, any[]>(); // Map<foreignTableName, rows>
 
   if (browser && schemaTable) {
     const { readDatFile, getHeaderLength, readColumn } = await import('pathofexile-dat/dat.js');
@@ -90,30 +97,40 @@ export const load: PageLoad = async ({ fetch, url }) => {
     // then use it in referencedTables.rows to get the row that matches the foreign key
     // and log it to the console to see if it works
 
-    rows.forEach((row) => {
-      // console.log('Row:', row);
-      // console.log("Row Key", headers[1].name);
-      // console.log('Row:', row[foreignTableName]);
+    // if there are referenced tables
+    if (referencedTables.length > 0) {
+      rows.forEach((row) => {
+        // console.log('Row:', row);
+        // console.log("Row Key", headers[1].name);
+        // console.log('Row:', row[foreignTableName]);
 
-      foreignTableName.forEach((name) => {
-        if (row[name] === null) {
-          return;
-        }
-        // console.log('Row:', row[name]);
-
-        referencedTables.forEach((refTable) => {
-          if (row[name] in refTable.rows) {
-            console.log('Row:', row[name]);
-            console.log('Ref Table:', refTable.rows[row[name]]);
+        foreignTableName.forEach((name) => {
+          if (row[name] === null) {
+            return;
           }
 
+          
+
+          // console.log('Row:', row[name]);
+          referencedTables.forEach((refTable) => {
+            if (refTable && row[name] in refTable.rows) {
+              // console.log('Row:', row[name]);
+              // console.log('Ref Table:', refTable.rows[row[name]]);
+
+              // push the row to the foreignRows array in the foreign table
+              if (foreignRows.has(refTable.tableName)) {
+                foreignRows.set(refTable.tableName, [...(foreignRows.get(refTable.tableName) || []), refTable.rows[row[name]]]);
+              } else {
+                foreignRows.set(refTable.tableName, [refTable.rows[row[name]]]);
+              }
+            }
+
+          });
         });
       });
-
-
-
-    });
-
+    } else {
+      console.log('No referenced tables found, skipping foreign key processing.');
+    }
   }
 
   return {
@@ -123,6 +140,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
     patchUrl,
     selectedVersion: gameVersion,
     versionNumber,
-    datFiles
+    datFiles,
+    foreignTableName,
+    foreignRows
   };
 };

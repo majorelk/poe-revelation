@@ -51,7 +51,7 @@ async function fromPublicSchema(
 
     try {
       header.length = getHeaderLength(header, { fieldSize: FIELD_SIZE } as any);
-      console.log(`Header "${header.name}" length calculated:`, header.length);
+      // console.log(`Header "${header.name}" length calculated:`, header.length);
     } catch (headerError) {
       console.error(`Failed to calculate header length for column: ${header.name}`, headerError);
       header.length = 0; // Fallback to prevent crashes
@@ -61,7 +61,7 @@ async function fromPublicSchema(
     return header;
   });
 
-  console.log('Generated Headers from Schema:', headers);
+  // console.log('Generated Headers from Schema:', headers);
   return headers;
 }
 
@@ -89,11 +89,11 @@ export async function processTableData(
   let rows: any[] = [];
 
   try {
-    console.log('Processing headers from schema:', table.columns);
+    // console.log('Processing headers from schema:', table.columns);
 
     headers = await fromPublicSchema(table, getHeaderLength);
 
-    console.log('Headers successfully generated:', headers);
+    // console.log('Headers successfully generated:', headers);
 
     // Extract rows using headers
     for (const header of headers) {

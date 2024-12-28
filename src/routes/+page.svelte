@@ -14,6 +14,8 @@
 
 	// Watch for changes in data.headers and update
 	$: headers = data.headers.map((header) => header.name || `Column`);
+  $: console.log("Data", data.foreignRows);
+  
 
 	function handleVersionChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
