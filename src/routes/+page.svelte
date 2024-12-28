@@ -34,8 +34,8 @@
 
 
 
-<div class="container flex flex-row h-screen">
-	<div class="flex flex-col max-h-full overflow-scroll">
+<div class="flex flex-row h-screen">
+	<div class="flex flex-col max-h-full overflow-scroll w-2/12">
 		<div class="sticky top-0 bg-secondary-500 p-4">
 			<label for="game-version">Select Game Version: </label>
 			<select
@@ -69,7 +69,7 @@
 	</div>
 
 	{#if data.rows.length > 0}
-		<div class="flex">
+		<div class="flex w-10/12">
 			<div class="table-container">
 				<table class="table table-hover">
 					<thead>
@@ -83,7 +83,7 @@
 						{#each data.rows as row}
 							<tr>
 								{#each data.headers as header, index}
-									<td class=" max-w-32 overflow-auto">{row[header.name || `Column_${index}`]}</td>
+									<td class="max-w-32 overflow-auto">{row[header.name || `Column_${index}`]}</td>
 								{/each}
 							</tr>
 						{/each}
