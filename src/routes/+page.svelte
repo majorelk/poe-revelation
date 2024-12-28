@@ -5,6 +5,15 @@
 	export let data;
 
 	let selectedVersion = data.selectedVersion || '1';
+	let headerVisible = true; // Controls header visibility
+	let tableContainer: HTMLDivElement;
+	let headerContainer: HTMLDivElement;
+
+	// Store headers for the absolute div
+	let headers: string[] = [];
+
+	// Watch for changes in data.headers and update
+	$: headers = data.headers.map((header) => header.name || `Column`);
 
 	function handleVersionChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
@@ -13,29 +22,25 @@
 	}
 
 	onMount(() => {
-		// console.log(data);
+		headers = data.headers.map((header) => header.name || `Column`);
 	});
 
 	function selectTable():
 		| import('svelte/elements').MouseEventHandler<HTMLAnchorElement>
 		| null
 		| undefined {
-		// set the url param to the selected table
 		return (event) => {
 			const version = selectedVersion;
 			const target = event.target as HTMLAnchorElement;
-			// const table = target.innerText;
-			// without the extension .datc64
 			const table = target.innerText.split('.')[0];
 			goto(`?version=${version}&table=${table}`);
 		};
 	}
 </script>
 
-
-
 <div class="flex flex-row h-screen">
-	<div class="flex flex-col max-h-full overflow-scroll w-2/12">
+	<!-- Sidebar -->
+	<div class="flex flex-col max-h-full w-2/12">
 		<div class="sticky top-0 bg-secondary-500 p-4">
 			<label for="game-version">Select Game Version: </label>
 			<select
@@ -47,16 +52,14 @@
 				<option value="1">POE 1</option>
 				<option value="2">POE 2</option>
 			</select>
-			<!-- <p>Current Patch URL: {data.patchUrl}</p> -->
 			<p>Current patch: {data.versionNumber}</p>
 			{#if data.tableName !== undefined}
-				<h3 class="h3 py-4">Selected table: {data.tableName}</h3>
+				<h3 class="h3 py-4 text-wrap">Selected table: {data.tableName}</h3>
 			{/if}
 		</div>
 
-		<!-- Table directory goes here -->
 		{#if data.datFiles.length > 0}
-			<ul>
+			<ul class="overflow-scroll w-full">
 				{#each data.datFiles as file}
 					<li>
 						<a on:click={selectTable()}>{file.name}</a>
@@ -68,30 +71,60 @@
 		{/if}
 	</div>
 
-	{#if data.rows.length > 0}
-		<div class="flex w-10/12">
-			<div class="table-container">
-				<table class="table table-hover">
+	<!-- Table Section -->
+	<div class="relative w-10/12">
+		<!-- Scrollable Table Body -->
+		<div class="table-container max-h-[100vh] relative" bind:this={tableContainer}>
+			<div class="sticky top-0 rounded" bind:this={headerContainer}>
+				<table>
 					<thead>
-						<tr>
-							{#each data.headers as header, index}
-								<th>{header.name || `Column_${index}`}</th>
+						<tr class=" bg-slate-900">
+							<th class="p-2 border rowCount">Row</th>
+							{#each headers as header}
+								<th class="p-2 border">{header}</th>
 							{/each}
 						</tr>
 					</thead>
-					<tbody>
-						{#each data.rows as row}
-							<tr>
-								{#each data.headers as header, index}
-									<td class="max-w-32 overflow-auto">{row[header.name || `Column_${index}`]}</td>
-								{/each}
-							</tr>
-						{/each}
-					</tbody>
 				</table>
 			</div>
+			<table class="table table-hover border-collapse">
+				<tbody>
+					{#each data.rows as row, index}
+						<tr>
+							<td class=" p-2 border rowCount">
+								{index}
+							</td>
+
+							{#each data.headers as header, index}
+								<td class=" p-2 border">
+									{row[header.name || `Column_${index}`]}
+								</td>
+							{/each}
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		</div>
-	{:else}
-		<p>Loading or no data available.</p>
-	{/if}
+	</div>
 </div>
+
+<style>
+	.table-container table {
+		width: 100vw;
+		border-collapse: collapse;
+		table-layout: fixed;
+	}
+
+	th,
+	td {
+		width: 20vw;
+		text-align: left;
+		text-overflow: ellipsis;
+		white-space: normal;
+		overflow: hidden;
+	}
+
+  .rowCount {
+    width: 5vw;
+  }
+</style>
