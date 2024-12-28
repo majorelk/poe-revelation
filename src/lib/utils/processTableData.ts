@@ -87,6 +87,8 @@ export async function processTableData(
 
   let headers: ViewerSerializedHeader[] = [];
   let rows: any[] = [];
+  let foreignTables: ViewerSerializedHeader[] = [];
+  let foreignRows: any[] = [];
 
   try {
     console.log('Processing headers from schema:', table.columns);
@@ -102,11 +104,23 @@ export async function processTableData(
         continue; // Skip invalid headers
       }
 
+      // // log the headers that are foreignrow
+      if (header.type?.key?.foreign) {
+        console.log('ForeignRow column detected:', header.name, '->', header.type.key);
+        foreignTables.push(header);
+      }
+
       const column = await readColumn(header, datFile);
       column.forEach((value, i) => {
         rows[i] = rows[i] || {};
         rows[i][header.name || `Column_${i}`] = value;
       });
+
+      // log the rows that are in the foreignrow column
+      if (header.type?.key?.foreign) {
+        console.log('ForeignRow values:', column);
+        foreignRows = column;
+      }
     }
 
   } catch (error) {
