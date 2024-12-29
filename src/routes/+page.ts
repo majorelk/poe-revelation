@@ -7,6 +7,17 @@ import { fetchDatFiles } from '$lib/utils/fetchDatFiles';
 import { processTableData } from '$lib/utils/processTableData';
 import type { Header } from 'pathofexile-dat/dat.js';
 
+// 🛠️ Utility function for resolving foreign key values
+function resolveForeignKeyValue(value: string | number, referencedTable: any): string {
+  if (Array.isArray(value)) {
+    return value.map((v) => resolveForeignKeyValue(v, referencedTable)).join(', ');
+  }
+
+  const referencedRow = referencedTable.rows[String(value)] || referencedTable.rows[Number(value)];
+  return referencedRow ? referencedRow.name || JSON.stringify(referencedRow) : `Missing(${value})`;
+}
+
+// 🚀 Page Load Function
 export const load: PageLoad = async ({ fetch, url }) => {
   const tableName = url.searchParams.get('table') || '';
   const gameVersion = url.searchParams.get('version') || '1';
@@ -26,7 +37,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   if (browser && schemaTable) {
     const { readDatFile, getHeaderLength, readColumn } = await import('pathofexile-dat/dat.js');
 
-    // Process main table data
+    // ✅ Process Main Table Data
     const result = await processTableData(
       tableName,
       datFiles,
@@ -39,12 +50,12 @@ export const load: PageLoad = async ({ fetch, url }) => {
     headers = result.headers;
     rows = result.rows;
 
-    // Identify foreign keys from headers
+    // ✅ Identify Foreign Keys from Headers
     foreignKeys = headers.filter(
       (header) => header.type.key && 'table' in header.type.key && header.type.key.foreign
     );
 
-    // Fetch referenced tables
+    // ✅ Fetch Referenced Tables
     const referencedTablesResults = await Promise.all(
       foreignKeys.map(async (fk) => {
         if (fk.type.key?.table) {
@@ -59,30 +70,31 @@ export const load: PageLoad = async ({ fetch, url }) => {
               readColumn,
               refTable
             );
-            return { tableName: fk.type.key.table, rows: refResult.rows, column: 'Id' };
+            return { tableName: fk.type.key.table, rows: refResult.rows, column: fk.type.key };
           }
         }
         return null;
       })
     );
+
     referencedTables = referencedTablesResults.filter((table): table is { tableName: string; rows: any; column: string } => table !== null);
 
-    // Process foreign key relationships directly in rows
+    // ✅ Process Foreign Key Relationships
     for (const foreignKey of foreignKeys) {
       const columnName = foreignKey.name;
       const referencedTableName = foreignKey.type.key?.table;
 
       const referencedTable = referencedTables.find((table) => table?.tableName === referencedTableName);
-      if (!referencedTable) continue;
+      if (!referencedTable) {
+        console.warn(`[WARNING] Referenced table "${referencedTableName}" not found in referencedTables.`);
+        continue;
+      }
 
       for (const row of rows) {
         const foreignKeyValue = row[columnName];
         if (foreignKeyValue === null || foreignKeyValue === undefined) continue;
 
-        const referencedRow = referencedTable.rows[foreignKeyValue];
-        if (referencedRow) {
-          row[columnName] = referencedRow.name || JSON.stringify(referencedRow);
-        }
+        row[columnName] = resolveForeignKeyValue(foreignKeyValue, referencedTable);
       }
     }
   }
