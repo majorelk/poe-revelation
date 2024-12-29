@@ -5,27 +5,18 @@
 	export let data;
 
 	let selectedVersion = data.selectedVersion || '1';
-	let headerVisible = true; // Controls header visibility
 	let tableContainer: HTMLDivElement;
 	let headerContainer: HTMLDivElement;
 
-	// Store headers for the absolute div
+	// Headers and rows
 	let headers: string[] = [];
-
-	// Watch for changes in data.headers and update
 	$: headers = data.headers.map((header) => header.name || `Column`);
-  $: console.log("Data", data.foreignRows);
-  
 
 	function handleVersionChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		const version = target.value;
 		goto(`?version=${version}`);
 	}
-
-	onMount(() => {
-		headers = data.headers.map((header) => header.name || `Column`);
-	});
 
 	function selectTable():
 		| import('svelte/elements').MouseEventHandler<HTMLAnchorElement>
@@ -126,7 +117,7 @@
 		overflow: hidden;
 	}
 
-  .rowCount {
-    width: 5vw;
-  }
+	.rowCount {
+		width: 5vw;
+	}
 </style>
