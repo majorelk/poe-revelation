@@ -32,7 +32,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   let headers: ViewerSerializedHeader[] = [];
   let rows = [];
   let foreignKeys: ViewerSerializedHeader[] = [];
-  let referencedTables: { tableName: string; rows: any; column: string }[] = [];
+  let referencedTables: { tableName: string; rows: any; column: { foreign: boolean } }[] = [];
 
   if (browser && schemaTable) {
     const { readDatFile, getHeaderLength, readColumn } = await import('pathofexile-dat/dat.js');
@@ -58,26 +58,30 @@ export const load: PageLoad = async ({ fetch, url }) => {
     // ✅ Fetch Referenced Tables
     const referencedTablesResults = await Promise.all(
       foreignKeys.map(async (fk) => {
+      try {
         if (fk.type.key?.table) {
-          const refTable = findTable(schemaFile!, fk.type.key.table);
-          if (refTable) {
-            const refResult = await processTableData(
-              fk.type.key.table,
-              datFiles,
-              fetch,
-              readDatFile,
-              getHeaderLength,
-              readColumn,
-              refTable
-            );
-            return { tableName: fk.type.key.table, rows: refResult.rows, column: fk.type.key };
-          }
+        const refTable = findTable(schemaFile!, fk.type.key.table);
+        if (refTable) {
+          const refResult = await processTableData(
+          fk.type.key.table,
+          datFiles,
+          fetch,
+          readDatFile,
+          getHeaderLength,
+          readColumn,
+          refTable
+          );
+          return { tableName: fk.type.key.table, rows: refResult.rows, column: fk.type.key };
         }
-        return null;
+        }
+      } catch (error) {
+        console.error(`Error processing foreign key table ${fk.type.key?.table}:`, error);
+      }
+      return null;
       })
     );
 
-    referencedTables = referencedTablesResults.filter((table): table is { tableName: string; rows: any; column: string } => table !== null);
+    referencedTables = referencedTablesResults.filter((table): table is { tableName: string; rows: any; column: { foreign: boolean } } => table !== null);
 
     // ✅ Process Foreign Key Relationships
     for (const foreignKey of foreignKeys) {
