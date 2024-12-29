@@ -2,6 +2,10 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
+	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+
+	const modalStore = getModalStore();
+
 	export let data;
 
 	let selectedVersion = data.selectedVersion || '1';
@@ -43,6 +47,59 @@
 			loading = false;
 		}
 	});
+
+	function prepareBodyData(row: any): string {
+		// Recursive function to parse stringified JSON values
+		function parseValue(value: any): any {
+			if (typeof value === 'string') {
+				try {
+					const parsed = JSON.parse(value);
+					return parseValue(parsed); // Recursively parse in case of nested JSON strings
+				} catch (e) {
+					return value; // Return the original value if parsing fails
+				}
+			} else if (typeof value === 'object' && value !== null) {
+				// If it's an object or array, recursively process each key or element
+				if (Array.isArray(value)) {
+					return value.map(parseValue);
+				} else {
+					return Object.fromEntries(
+						Object.entries(value).map(([key, val]) => [key, parseValue(val)])
+					);
+				}
+			}
+			return value; // Return primitive values as is
+		}
+
+		const parsedRow = parseValue(row);
+
+		// Build the string representation
+    console.log('parsedRow:', parsedRow);
+    
+		return Object.entries(parsedRow)
+			.map(
+				([key, value]) =>
+					`${key}: ${typeof value === 'object' ? JSON.stringify(value, null, 2) : value}`
+			)
+			.join('\n');
+	}
+
+	function selectRow(row: any): void {
+		new Promise<boolean>((resolve) => {
+			const modal: ModalSettings = {
+				type: 'component',
+				component: 'list',
+				title: 'Row Data',
+				body: prepareBodyData(row),
+				response: (r: boolean) => {
+					resolve(r);
+				}
+			};
+			modalStore.trigger(modal);
+		}).then((r: any) => {
+			console.log('resolved response:', r);
+		});
+	}
 </script>
 
 <div class="flex flex-row h-screen">
@@ -94,10 +151,8 @@
 					<div class="box2"></div>
 					<div class="box3"></div>
 				</div>
-        <h3 class="h3">
-          Loading it... and by it, I mean the data.
-        </h3>
-        <sub class="text-xs">Giggity</sub>
+				<h3 class="h3">Loading it... and by it, I mean the data.</h3>
+				<sub class="text-xs">Giggity</sub>
 			</div>
 		{:else if data.rows.length === 0}
 			<p>No data found for the selected table.</p>
@@ -118,7 +173,7 @@
 				<table class="table table-hover border-collapse">
 					<tbody>
 						{#each data.rows as row, index}
-							<tr>
+							<tr on:click={() => selectRow(row)}>
 								<td class=" p-2 rowCount">
 									{index}
 								</td>
