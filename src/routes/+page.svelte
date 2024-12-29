@@ -7,10 +7,17 @@
 	let selectedVersion = data.selectedVersion || '1';
 	let tableContainer: HTMLDivElement;
 	let headerContainer: HTMLDivElement;
+	let loading: boolean = true;
 
 	// Headers and rows
 	let headers: string[] = [];
 	$: headers = data.headers.map((header) => header.name || `Column`);
+
+	$: {
+		if (data.headers.length > 0) {
+			loading = false;
+		}
+	}
 
 	function handleVersionChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
@@ -19,16 +26,23 @@
 	}
 
 	function selectTable():
-		| import('svelte/elements').MouseEventHandler<HTMLAnchorElement>
+		| import('svelte/elements').MouseEventHandler<HTMLButtonElement>
 		| null
 		| undefined {
 		return (event) => {
+			loading = true;
 			const version = selectedVersion;
-			const target = event.target as HTMLAnchorElement;
+			const target = event.target as HTMLButtonElement;
 			const table = target.innerText.split('.')[0];
 			goto(`?version=${version}&table=${table}`);
 		};
 	}
+
+	onMount(() => {
+		if (data.headers.length > 0) {
+			loading = false;
+		}
+	});
 </script>
 
 <div class="flex flex-row h-screen">
@@ -55,7 +69,12 @@
 			<ul class="overflow-scroll w-full">
 				{#each data.datFiles as file}
 					<li>
-						<a on:click={selectTable()}>{file.name}</a>
+						<button
+							type="button"
+							class=" btn btn-sm hover:bg-primary-700"
+							aria-label="Select Table"
+							on:click={selectTable()}>{file.name}</button
+						>
 					</li>
 				{/each}
 			</ul>
@@ -67,37 +86,54 @@
 	<!-- Table Section -->
 	<div class="relative w-10/12">
 		<!-- Scrollable Table Body -->
-		<div class="table-container max-h-[100vh] relative" bind:this={tableContainer}>
-			<div class="sticky top-0 rounded" bind:this={headerContainer}>
-				<table>
-					<thead>
-						<tr class=" bg-slate-900">
-							<th class="p-2 border rowCount">Row</th>
-							{#each headers as header}
-								<th class="p-2 border">{header}</th>
-							{/each}
-						</tr>
-					</thead>
+
+		{#if loading}
+			<div class="absolute inset-0 flex flex-col items-center justify-center">
+				<div class="freeloader">
+					<div class="box1"></div>
+					<div class="box2"></div>
+					<div class="box3"></div>
+				</div>
+        <h3 class="h3">
+          Loading it... and by it, I mean the data.
+        </h3>
+        <sub class="text-xs">Giggity</sub>
+			</div>
+		{:else if data.rows.length === 0}
+			<p>No data found for the selected table.</p>
+		{:else}
+			<div class="table-container max-h-[100vh] relative" bind:this={tableContainer}>
+				<div class="sticky top-0 rounded" bind:this={headerContainer}>
+					<table>
+						<thead>
+							<tr class=" bg-slate-900">
+								<th class="p-2 rowCount">Row</th>
+								{#each headers as header}
+									<th class="p-2">{header}</th>
+								{/each}
+							</tr>
+						</thead>
+					</table>
+				</div>
+				<table class="table table-hover border-collapse">
+					<tbody>
+						{#each data.rows as row, index}
+							<tr>
+								<td class=" p-2 rowCount">
+									{index}
+								</td>
+
+								{#each data.headers as header, index}
+									<td class=" p-2">
+										{row[header.name || `Column_${index}`]}
+									</td>
+								{/each}
+							</tr>
+						{/each}
+					</tbody>
 				</table>
 			</div>
-			<table class="table table-hover border-collapse">
-				<tbody>
-					{#each data.rows as row, index}
-						<tr>
-							<td class=" p-2 border rowCount">
-								{index}
-							</td>
-
-							{#each data.headers as header, index}
-								<td class=" p-2 border">
-									{row[header.name || `Column_${index}`]}
-								</td>
-							{/each}
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+		{/if}
 	</div>
 </div>
 

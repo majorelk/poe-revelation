@@ -28,7 +28,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   let { patchUrl, versionNumber } = await fetchVersion(fetch, gameVersion);
   let datFiles = await fetchDatFiles(fetch, patchUrl);
 
-  type ViewerSerializedHeader = Omit<Header, 'length'> & { length?: number; name: string };
+  type ViewerSerializedHeader = Omit<Header, 'length'> & { length?: number; name: string } & { type: { key?: { table?: string; foreign?: boolean } } };
   let headers: ViewerSerializedHeader[] = [];
   let rows = [];
   let foreignKeys: ViewerSerializedHeader[] = [];
