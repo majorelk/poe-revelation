@@ -45,7 +45,7 @@
 	onMount(() => {
 		if (data.headers.length > 0) {
 			loading = false;
-		}
+		}   
 	});
 
 	function prepareBodyData(row: any): string {
@@ -171,21 +171,23 @@
 					</table>
 				</div>
 				<table class="table table-hover border-collapse">
-					<tbody>
-						{#each data.rows as row, index}
-							<tr on:click={() => selectRow(row)}>
-								<td class=" p-2 rowCount">
-									{index}
-								</td>
+          <tbody>
+            <!-- TODO: restore this to full rows -->
+            <!-- {#each data.rows.slice(0, 500) as row, index} -->
+             {#each data.rows as row, index}
+              <tr on:click={() => selectRow(row)}>
+                <td class=" p-2 rowCount">
+                  {index}
+                </td>
 
-								{#each data.headers as header, index}
-									<td class=" p-2">
-										{row[header.name || `Column_${index}`]}
-									</td>
-								{/each}
-							</tr>
-						{/each}
-					</tbody>
+                {#each data.headers as header, index}
+                  <td class=" p-2">
+                    {row[header.name || `Column_${index}`]}
+                  </td>
+                {/each}
+              </tr>
+            {/each}
+          </tbody>
 				</table>
 			</div>
 		{/if}

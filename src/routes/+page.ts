@@ -49,6 +49,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
     );
     headers = result.headers;
     rows = result.rows;
+    console.log('Processed Table Data:', { headers, rows });
+    
 
     // ✅ Identify Foreign Keys from Headers
     foreignKeys = headers.filter(
@@ -58,26 +60,29 @@ export const load: PageLoad = async ({ fetch, url }) => {
     // ✅ Fetch Referenced Tables
     const referencedTablesResults = await Promise.all(
       foreignKeys.map(async (fk) => {
-      try {
-        if (fk.type.key?.table) {
-        const refTable = findTable(schemaFile!, fk.type.key.table);
-        if (refTable) {
-          const refResult = await processTableData(
-          fk.type.key.table,
-          datFiles,
-          fetch,
-          readDatFile,
-          getHeaderLength,
-          readColumn,
-          refTable
-          );
-          return { tableName: fk.type.key.table, rows: refResult.rows, column: fk.type.key };
+        try {
+          if (fk.type.key?.table) {
+            const refTable = findTable(schemaFile!, fk.type.key.table);
+            if (!refTable) {
+              console.warn(`Referenced table schema not found for: ${fk.type.key.table}`);
+              return null;
+            }
+
+            const refResult = await processTableData(
+              fk.type.key.table,
+              datFiles,
+              fetch,
+              readDatFile,
+              getHeaderLength,
+              readColumn,
+              refTable
+            );
+            return { tableName: fk.type.key.table, rows: refResult.rows, column: fk.type.key };
+          }
+        } catch (error) {
+          console.error(`Error processing foreign key table ${fk.type.key?.table}:`, error);
         }
-        }
-      } catch (error) {
-        console.error(`Error processing foreign key table ${fk.type.key?.table}:`, error);
-      }
-      return null;
+        return null;
       })
     );
 

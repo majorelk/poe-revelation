@@ -73,7 +73,8 @@ export async function processTableData(
   readDatFile: (filenameOrExt: string, content: ArrayBuffer) => DatFile,
   getHeaderLength: (header: Pick<Header, 'type'>, datFile: DatFile) => number,
   readColumn: (header: ViewerSerializedHeader, datFile: DatFile) => any[],
-  table: SchemaTable
+  table: SchemaTable,
+  batchSize = 1000 // Default batch size
 ): Promise<{ datFile: DatFile; headers: ViewerSerializedHeader[]; rows: any[] }> {
   const fileName = `${tableName.toLowerCase()}.datc64`;
   const targetFile = datFiles.find((file) => file.name === fileName);
@@ -89,24 +90,40 @@ export async function processTableData(
   let rows: any[] = [];
 
   try {
-    // console.log('Processing headers from schema:', table.columns);
-
     headers = await fromPublicSchema(table, getHeaderLength);
 
-    // console.log('Headers successfully generated:', headers);
-
-    // Extract rows using headers
+    const columnData: any[][] = [];
     for (const header of headers) {
       if (!header.length || header.length === 0) {
         console.warn(`Skipping header with invalid length: ${header.name}`);
-        continue; // Skip invalid headers
+        continue;
       }
 
-      const column = await readColumn(header, datFile);
-      column.forEach((value, i) => {
-        rows[i] = rows[i] || {};
-        rows[i][header.name || `Column_${i}`] = value;
-      });
+      try {
+        columnData.push(await readColumn(header, datFile));
+      } catch (columnError) {
+        console.error(`Error reading column data for header: ${header.name}`, columnError);
+        columnData.push([]);
+      }
+    }
+
+    const totalRows = columnData[0]?.length || 0;
+
+    // Process rows in batches
+    for (let i = 0; i < totalRows; i += batchSize) {
+      const batchRows = [];
+      console.log(`Processing rows ${i} to ${Math.min(i + batchSize, totalRows)}...`);
+
+      for (let j = i; j < Math.min(i + batchSize, totalRows); j++) {
+        const row: any = {};
+        headers.forEach((header, index) => {
+          row[header.name || `Column_${index}`] = columnData[index][j];
+        });
+        batchRows.push(row);
+      }
+
+      rows.push(...batchRows);
+      await new Promise((resolve) => setTimeout(resolve, 100)); // Yield to event loop
     }
 
   } catch (error) {
