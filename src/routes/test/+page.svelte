@@ -1,57 +1,91 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	// @ts-nocheck
 
+	//Import local datatable components
+	import ThSort from '$lib/components/datatable/ThSort.svelte';
+	import ThFilter from '$lib/components/datatable/ThFilter.svelte';
+	import Search from '$lib/components/datatable/Search.svelte';
+	import RowsPerPage from '$lib/components/datatable/RowsPerPage.svelte';
+	import RowCount from '$lib/components/datatable/RowCount.svelte';
+	import Pagination from '$lib/components/datatable/Pagination.svelte';
+
+	// import data from '$lib/components/datatable/data';
 	export let data;
+	let headers: string[] = [];
+	$: headers = data.headers.map((header) => header.name || `Column`);
 
-	onMount(() => {
-		console.log('Glizzy');
-	});
+	//Import handler from SSD
+	import { DataHandler } from '@vincjo/datatables/legacy';
+
+	//Init data handler - CLIENT
+	const handler = new DataHandler(data.rows, { rowsPerPage: 10 });
+	const rows = handler.getRows();
 </script>
 
-<h1 class="h1">Table: {data.tableName}</h1>
-
-{#if data.headers.length > 0}
-	<div class="container">
-		<h2 class="h2">Headers</h2>
-			<dl class="list-dl">
-        {#each data.headers as header, index}
-          <div>
-            <span class="badge-icon p-4 variant-soft-secondary">
-              {index + 1}
-            </span>
-            <span class="flex-auto">
-              <dt class="font-bold">{header.name || `Column_${index}`}</dt>
-              <dd class="text-sm opacity-50">Offset: {header.offset}, Length: {header.length}</dd>
-            </span>
-            <!-- <span>⋮</span> -->
-          </div>
-        {/each}
-			</dl>
-	</div>
-{/if}
-
-{#if data.rows.length > 0}
-	<h2>Rows</h2>
-	<div class="table-container">
-		<table class="table table-hover">
+<div class="table-container max-h-[100vh] relative">
+	<header class="flex justify-between gap-4">
+		<Search {handler} />
+		<RowsPerPage {handler} />
+	</header>
+	<div class="sticky top-0 rounded">
+		<table>
 			<thead>
-				<tr>
-					{#each data.headers as header, index}
-						<th>{header.name || `Column_${index}`}</th>
+				<tr class="bg-slate-900">
+          <th class="p-2 rowCount">Row</th>
+					{#each headers as header, index}
+						<ThSort {handler} orderBy={header}>{header}</ThSort>
+					{/each}
+				</tr>
+				<tr class="bg-slate-900">
+          <th class="p-2 rowCount">
+          </th>
+					{#each headers as header, index}
+						<ThFilter {handler} filterBy={header}>{header}</ThFilter>
 					{/each}
 				</tr>
 			</thead>
-			<tbody>
-				{#each data.rows as row}
-					<tr>
-						{#each data.headers as header, index}
-							<td class=" max-w-32 overflow-auto">{row[header.name || `Column_${index}`]}</td>
-						{/each}
-					</tr>
-				{/each}
-			</tbody>
 		</table>
 	</div>
-{:else}
-	<p>Loading or no data available.</p>
-{/if}
+	<table class="table table-hover border-collapse">
+		<tbody>
+			{#each $rows as row, index}
+				<tr>
+					<td class=" p-2 rowCount">
+						{index}
+					</td>
+
+					{#each data.headers as header, index}
+						<td class=" p-2">
+							{row[header.name || `Column_${index}`]}
+						</td>
+					{/each}
+				</tr>
+			{/each}
+		</tbody>
+	</table>
+	<footer class="flex justify-between">
+		<RowCount {handler} />
+		<Pagination {handler} />
+	</footer>
+</div>
+
+<style>
+	.table-container table {
+		width: 100vw;
+		border-collapse: collapse;
+		table-layout: fixed;
+	}
+
+	th,
+	td {
+		width: 20vw;
+		text-align: left;
+		text-overflow: ellipsis;
+		white-space: normal;
+		overflow: hidden;
+	}
+
+	.rowCount {
+		width: 5vw;
+	}
+</style>

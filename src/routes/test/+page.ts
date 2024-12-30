@@ -1,134 +1,122 @@
 import type { PageLoad } from './$types';
 import { browser } from '$app/environment';
-import { SCHEMA_URL, type SchemaFile, type SchemaTable } from 'pathofexile-dat-schema';
 
-interface Header {
-  name: string | null;
-  offset: number;
-  readonly length: number;
-  type: {
-    byteView?: { array: boolean };
-    array?: boolean;
-    boolean?: Record<any, never>;
-    integer?: { unsigned: boolean; size: number };
-    decimal?: { size: number };
-    string?: Record<any, never>;
-    key?: { foreign: boolean; table: string | null; viewColumn: string | null };
-  };
-  textLength?: number;
+import { fetchSchema, findTable } from '$lib/utils/fetchSchema';
+import { fetchVersion } from '$lib/utils/fetchVersion';
+import { fetchDatFiles } from '$lib/utils/fetchDatFiles';
+import { processTableData } from '$lib/utils/processTableData';
+import type { Header } from 'pathofexile-dat/dat.js';
+
+// 🛠️ Utility function for resolving foreign key values
+function resolveForeignKeyValue(value: string | number, referencedTable: any): string {
+  if (Array.isArray(value)) {
+    return value.map((v) => resolveForeignKeyValue(v, referencedTable)).join(', ');
+  }
+
+  const referencedRow = referencedTable.rows[String(value)] || referencedTable.rows[Number(value)];
+  return referencedRow ? referencedRow.name || JSON.stringify(referencedRow) : `Missing(${value})`;
 }
 
-interface DatSchema {
-  name: string;
-  headers: ViewerSerializedHeader[];
-}
+// 🚀 Page Load Function
+export const load: PageLoad = async ({ fetch, url }) => {
+  const tableName = url.searchParams.get('table') || '';
+  const gameVersion = url.searchParams.get('version') || '1';
 
-type ViewerSerializedHeader = Omit<Header, 'length'> & { length?: number };
+  let schemaFile = await fetchSchema(fetch);
+  let schemaTable = tableName ? findTable(schemaFile!, tableName) : null;
 
-const FIELD_SIZE = {
-  BOOL: 1,
-  BYTE: 1,
-  SHORT: 2,
-  LONG: 4,
-  LONGLONG: 8,
-  STRING: 8,
-  KEY: 8,
-  KEY_FOREIGN: 8 + 8,
-  ARRAY: 8 + 8
-};
+  let { patchUrl, versionNumber } = await fetchVersion(fetch, gameVersion);
+  let datFiles = await fetchDatFiles(fetch, patchUrl);
 
-export const load: PageLoad = async ({ fetch }) => {
-  const tableName = 'ExpandingPulse';
-  let datFile: any = null;
-  let schemaFile: SchemaFile | null = null;
+  type ViewerSerializedHeader = Omit<Header, 'length'> & { length?: number; name: string } & { type: { key?: { table?: string; foreign?: boolean } } };
   let headers: ViewerSerializedHeader[] = [];
-  let rows: { [key: string]: any }[] = [];
+  let rows = [];
+  let foreignKeys: ViewerSerializedHeader[] = [];
+  let referencedTables: { tableName: string; rows: any; column: { foreign: boolean } }[] = [];
 
-  try {
-    // Fetch schema file on server
-    schemaFile = await fetch('/schema.min.json').then((r) => r.json());
-    const table = schemaFile?.tables.find((t) => t.name === tableName);
+  if (browser && schemaTable) {
+    const { readDatFile, getHeaderLength, readColumn } = await import('pathofexile-dat/dat.js');
 
-    if (!table) {
-      throw new Error(`Table ${tableName} not found in schema.`);
-    }
+    // ✅ Process Main Table Data
+    const result = await processTableData(
+      tableName,
+      datFiles,
+      fetch,
+      readDatFile,
+      getHeaderLength,
+      readColumn,
+      schemaTable
+    );
+    headers = result.headers;
+    rows = result.rows;
+    console.log('Processed Table Data:', { headers, rows });
+    
 
-    if (browser) {
-      // Run only on the client-side
-      const { readDatFile, readColumn, getHeaderLength } = await import('pathofexile-dat/dat.js');
+    // ✅ Identify Foreign Keys from Headers
+    foreignKeys = headers.filter(
+      (header) => header.type.key && 'table' in header.type.key && header.type.key.foreign
+    );
 
-      const index = await fetch(
-        'https://ggpk.exposed/files?q=index&adapter=https%3A%2F%2Fpatch-poe2.poecdn.com%2F4.1.0.11%2F&path=data'
-      ).then((r) => r.json());
+    // ✅ Fetch Referenced Tables
+    const referencedTablesResults = await Promise.all(
+      foreignKeys.map(async (fk) => {
+        try {
+          if (fk.type.key?.table) {
+            const refTable = findTable(schemaFile!, fk.type.key.table);
+            if (!refTable) {
+              console.warn(`Referenced table schema not found for: ${fk.type.key.table}`);
+              return null;
+            }
 
-      const fileName = tableName.toLowerCase() + '.datc64';
-      const datFileUrl = index.files.find((f: any) => f.basename === fileName)?.url;
-
-      if (!datFileUrl) {
-        throw new Error(`File ${fileName} not found in index.`);
-      }
-
-      const fileBuffer = await fetch(datFileUrl).then((r) => r.arrayBuffer());
-      datFile = await readDatFile('.datc64', fileBuffer);
-
-      headers = await fromPublicSchema(table, getHeaderLength);
-
-      // Extract rows using headers
-      for (const header of headers) {
-        const column = await readColumn(header, datFile);
-        for (let i = 0; i < datFile.rowCount; i++) {
-          rows[i] = rows[i] || {};
-          rows[i][header.name || `Column_${i}`] = column[i];
+            const refResult = await processTableData(
+              fk.type.key.table,
+              datFiles,
+              fetch,
+              readDatFile,
+              getHeaderLength,
+              readColumn,
+              refTable
+            );
+            return { tableName: fk.type.key.table, rows: refResult.rows, column: fk.type.key };
+          }
+        } catch (error) {
+          console.error(`Error processing foreign key table ${fk.type.key?.table}:`, error);
         }
+        return null;
+      })
+    );
+
+    referencedTables = referencedTablesResults.filter((table): table is { tableName: string; rows: any; column: { foreign: boolean } } => table !== null);
+
+    // ✅ Process Foreign Key Relationships
+    for (const foreignKey of foreignKeys) {
+      const columnName = foreignKey.name;
+      const referencedTableName = foreignKey.type.key?.table;
+
+      const referencedTable = referencedTables.find((table) => table?.tableName === referencedTableName);
+      if (!referencedTable) {
+        console.warn(`[WARNING] Referenced table "${referencedTableName}" not found in referencedTables.`);
+        continue;
+      }
+
+      for (const row of rows) {
+        const foreignKeyValue = row[columnName];
+        if (foreignKeyValue === null || foreignKeyValue === undefined) continue;
+
+        row[columnName] = resolveForeignKeyValue(foreignKeyValue, referencedTable);
       }
     }
-  } catch (error) {
-    console.error('Error loading data:', error);
   }
 
   return {
     headers,
     rows,
-    tableName
+    tableName,
+    patchUrl,
+    selectedVersion: gameVersion,
+    versionNumber,
+    datFiles,
+    foreignKeys,
+    referencedTables,
   };
 };
-
-// Helper Function
-async function fromPublicSchema(sch: SchemaTable, getHeaderLength: any): Promise<ViewerSerializedHeader[]> {
-  let currentOffset = 0;
-
-  const headers: ViewerSerializedHeader[] = sch.columns.map((column, index) => {
-    const header: ViewerSerializedHeader = {
-      name: column.name || `Column_${index}`,
-      type: {
-        array: column.array,
-        byteView: column.type === 'array' ? { array: true } : undefined,
-        integer: column.type === 'u16' ? { unsigned: true, size: 2 }
-          : column.type === 'u32' ? { unsigned: true, size: 4 }
-            : column.type === 'i16' ? { unsigned: false, size: 2 }
-              : column.type === 'i32' ? { unsigned: false, size: 4 }
-                : column.type === 'enumrow' ? { unsigned: false, size: 4 }
-                  : undefined,
-        decimal: column.type === 'f32' ? { size: 4 } : undefined,
-        string: column.type === 'string' ? {} : undefined,
-        boolean: column.type === 'bool' ? {} : undefined,
-        key: (column.type === 'row' || column.type === 'foreignrow') ? {
-          foreign: (column.type === 'foreignrow'),
-          table: column.references?.table ?? null,
-          viewColumn: null
-        } : undefined
-      },
-      textLength: 4 * 3 - 1,
-      length: 0,
-      offset: 0
-    };
-
-    header.length = getHeaderLength(header, { fieldSize: FIELD_SIZE } as any);
-    header.offset = currentOffset;
-    currentOffset += header.length ?? 0;
-
-    return header;
-  });
-
-  return headers;
-}
