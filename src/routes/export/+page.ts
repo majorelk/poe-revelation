@@ -9,37 +9,52 @@ import type { Header } from 'pathofexile-dat/dat.js';
 
 // 🚀 Page Load Function
 export const load: PageLoad = async ({ fetch, url }) => {
-  const tableName = 'GemTags';
-  const gameVersion = '2';
+  // Define an array of table names to process
+  const tableNames = ['GemTags', 'GrantedEffects', 'GrantedEffectsPerLevel'];
+  const gameVersion = url.searchParams.get('version') || '1';
 
   let schemaFile = await fetchSchema(fetch);
-  let schemaTable = tableName ? findTable(schemaFile!, tableName) : null;
-
   let { patchUrl, versionNumber } = await fetchVersion(fetch, gameVersion);
   let datFiles = await fetchDatFiles(fetch, patchUrl);
 
   type ViewerSerializedHeader = Omit<Header, 'length'> & { length?: number; name: string } & { type: { key?: { table?: string; foreign?: boolean } } };
-  let headers: ViewerSerializedHeader[] = [];
-  let gemTags: any[] = [];
 
-  if (browser && schemaTable) {
+  let allData: Record<
+    string,
+    { headers: ViewerSerializedHeader[]; rows: any[] }
+  > = {};
+
+  if (browser && schemaFile) {
     const { readDatFile, getHeaderLength, readColumn } = await import('pathofexile-dat/dat.js');
 
-    const result = await processTableData(
-      tableName,
-      datFiles,
-      fetch,
-      readDatFile,
-      getHeaderLength,
-      readColumn,
-      schemaTable
-    );
-    headers = result.headers;
-    gemTags = result.rows;
+    // Iterate over each table name and process them
+    for (const tableName of tableNames) {
+      let schemaTable = tableName ? findTable(schemaFile!, tableName, gameVersion) : null;
+
+      if (schemaTable) {
+        const result = await processTableData(
+          tableName,
+          datFiles,
+          fetch,
+          readDatFile,
+          getHeaderLength,
+          readColumn,
+          schemaTable
+        );
+
+        console.log(`Processing table: ${tableName}`);
+        console.log('Schema Table:', schemaTable);
+        console.log('Processed Result:', result);
+
+        allData[tableName] = {
+          headers: result.headers,
+          rows: result.rows,
+        };
+      }
+    }
   }
 
   return {
-    headers,
-    gemTags
+    allData,
   };
 };

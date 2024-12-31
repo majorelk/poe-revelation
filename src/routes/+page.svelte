@@ -101,7 +101,7 @@
 			console.log('resolved response:', r);
 			if (r) {
 				rowStore.set(row);
-				goto('/export');
+				goto(`/export?version=${selectedVersion}`);
 			}
 		});
 	}

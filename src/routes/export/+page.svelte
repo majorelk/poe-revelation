@@ -8,44 +8,72 @@
 	let wikitext: string = ''; // Store generated Wikitext
 	export let data;
 
-	// ✅ Gem Tags Array
-	let gemTags = data.gemTags || [];
+	// ✅ Extract datasets dynamically
+	const gemTags = data?.allData.GemTags?.rows || [];
+	const grantedEffects = data?.allData.GrantedEffects?.rows || [];
+	const grantedEffectsPerLevel = data?.allData.GrantedEffectsPerLevel?.rows || [];
+
+	const coque = grantedEffectsPerLevel.map((effect) => {
+		//  console.log('Effect:', effect.GrantedEffect);
+		if (effect.GrantedEffect === '33') {
+			console.log('Effect:', effect);
+		}
+	});
+
+  
 
 	// Interface for the skill data
 	interface ActiveSkillData {
 		Id: string;
 		DisplayedName: string;
 		Description: string;
+		GrantedEffect: string;
 		Icon_DDSFile: string;
 		ActiveSkillTypes: { Id: string; FlagStat?: number | null }[];
 		Input_StatKeys: { Id: string; Text?: string }[];
 		Output_StatKeys: { Id: string; Text?: string }[];
 	}
 
+  function getGrantedEffectPerLevel(index: number): void {
+    grantedEffectsPerLevel.map((effect) => {
+      if (effect.GrantedEffect === index) {
+        console.log('Effect:', effect);
+      }
+    });
+  }
+
 	function parseDescription(description: string): string {
 		if (!description) return '';
-
 		return description
 			.replace(/\[.*?\|/g, '') // Remove text inside square brackets before a pipe
 			.replace(/[\[\]]/g, '') // Remove any remaining square brackets
 			.trim();
 	}
 
-	// ✅ Build a Set of Valid Tags from gemTags
+	// Function to get the granted effect from the ID
+	function getCastTime(id: string): string {
+		const effect = grantedEffects.find((effect) => effect.Id === id);
+		console.log('Index of Effect:', grantedEffects.indexOf(effect));
+		// console.log(grantedEffectsPerLevel[grantedEffects.indexOf(effect)]);
+		// getGrantedEffectPerLevel(grantedEffects.indexOf(effect));
+
+		if (!effect) return effect.CastTime;
+		const castTime = effect.CastTime / 1000;
+		return castTime.toFixed(2);
+	}
+
+	// ✅ Build a Set of Valid Tags from GemTags
 	const validTags = new Set(gemTags.map((tag) => tag.Id));
 
 	// 📑 Step 1: Parse Skill Tags
 	function parseGemTags(skillTypes: { Id: string }[]): string {
-		console.log('Valid Tags:', validTags);
-		console.log('Skill Types:', skillTypes);
-
 		return skillTypes
 			.filter((type) => validTags.has(type.Id.toLowerCase())) // Normalize to lowercase for comparison
 			.map((type) => {
 				const gemTag = gemTags.find((gemTag) => gemTag.Id.toLowerCase() === type.Id.toLowerCase());
-				console.log(`Mapping Type: ${type.Id}, Found Tag:`, gemTag);
+				// console.log(`Mapping Type: ${type.Id}, Found Tag:`, gemTag.Name);
 
-				if (!gemTag?.Tag) return `[${type.Id}]`; // Fallback to readable tag if no match
+				if (!gemTag?.Tag) return `${type.Id}`; // Fallback to readable tag if no match
 
 				// Extract text after the pipe if it exists
 				const tagText = gemTag.Tag.includes('|')
@@ -78,6 +106,7 @@
 		const statText = parseStatText([...skill.Input_StatKeys, ...skill.Output_StatKeys]);
 		const iconPath = skill.Icon_DDSFile.replace('Art/2DArt/', '');
 		const cleanDescription = parseDescription(skill.Description);
+		const castTime = getCastTime(skill.GrantedEffect);
 
 		return `{{Item
 |rarity_id = normal
@@ -93,7 +122,7 @@
 |gem_tags = ${gemTags}
 |gem_description = ${cleanDescription}
 |skill_id = ${skill.DisplayedName}
-|cast_time = 0.70
+|cast_time = ${castTime}
 |required_level = 1
 |static_cost_types = Mana
 |static_critical_strike_chance = 9
@@ -106,26 +135,28 @@
 	}
 
 	onMount(() => {
-		console.log('Available Gem Tags:', gemTags);
+		// console.log('Available Data:', { gemTags, grantedEffects });
 
 		// Retrieve data from the store
 		const storeData = get(rowStore);
 		if (storeData) {
 			rowData = storeData;
-			console.log('Row data received in /export:', rowData);
+			// console.log('Row data received in /export:', rowData);
 
 			// Transform rowData into ActiveSkillData interface
 			const activeSkillData: ActiveSkillData = {
 				Id: rowData.Id,
 				DisplayedName: rowData.DisplayedName,
 				Description: rowData.Description,
+				GrantedEffect: rowData.GrantedEffect,
 				Icon_DDSFile: rowData.Icon_DDSFile,
 				ActiveSkillTypes: rowData.ActiveSkillTypes || [],
 				Input_StatKeys: rowData.Input_StatKeys || [],
 				Output_StatKeys: rowData.Output_StatKeys || []
 			};
 
-			// Generate Wikitext
+      getGrantedEffectPerLevel(33);
+
 			wikitext = parseSkillToWikitext(activeSkillData);
 		} else {
 			console.warn('No row data found in the store.');
