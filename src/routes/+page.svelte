@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 
 	import { getModalStore, type ModalSettings } from '@skeletonlabs/skeleton';
+	import { rowStore } from '$lib/stores/rowStore';
 
 	const modalStore = getModalStore();
 
@@ -45,7 +46,7 @@
 	onMount(() => {
 		if (data.headers.length > 0) {
 			loading = false;
-		}   
+		}
 	});
 
 	function prepareBodyData(row: any): string {
@@ -74,8 +75,8 @@
 		const parsedRow = parseValue(row);
 
 		// Build the string representation
-    console.log('parsedRow:', parsedRow);
-    
+		console.log('parsedRow:', parsedRow);
+
 		return Object.entries(parsedRow)
 			.map(
 				([key, value]) =>
@@ -96,9 +97,35 @@
 				}
 			};
 			modalStore.trigger(modal);
-		}).then((r: any) => {
+		}).then(async (r: any) => {
 			console.log('resolved response:', r);
+			if (r) {
+				rowStore.set(row);
+				goto('/export');
+			}
 		});
+	}
+
+	function displayValue(value: any): string {
+		// Check if the value is an object or an array
+		if (value && typeof value === 'object') {
+			return JSON.stringify(value, null, 2); // Pretty-print objects and arrays
+		}
+
+		// Check if the value is a stringified JSON object
+		if (typeof value === 'string') {
+			try {
+				const parsed = JSON.parse(value);
+				if (typeof parsed === 'object' && parsed !== null) {
+					return JSON.stringify(parsed, null, 2);
+				}
+			} catch (e) {
+				// If parsing fails, return the original string
+			}
+		}
+
+		// Return primitive values as is
+		return String(value);
 	}
 </script>
 
@@ -171,23 +198,21 @@
 					</table>
 				</div>
 				<table class="table table-hover border-collapse">
-          <tbody>
-            <!-- TODO: restore this to full rows -->
-            <!-- {#each data.rows.slice(0, 500) as row, index} -->
-             {#each data.rows as row, index}
-              <tr on:click={() => selectRow(row)}>
-                <td class=" p-2 rowCount">
-                  {index}
-                </td>
+					<tbody>
+						{#each data.rows as row, index}
+							<tr on:click={() => selectRow(row)}>
+								<td class=" p-2 rowCount max-h-20">
+									{index}
+								</td>
 
-                {#each data.headers as header, index}
-                  <td class=" p-2">
-                    {row[header.name || `Column_${index}`]}
-                  </td>
-                {/each}
-              </tr>
-            {/each}
-          </tbody>
+								{#each data.headers as header, index}
+									<td class=" p-2 max-h-20">
+										{@html displayValue(row[header.name || `Column_${index}`])}
+									</td>
+								{/each}
+							</tr>
+						{/each}
+					</tbody>
 				</table>
 			</div>
 		{/if}

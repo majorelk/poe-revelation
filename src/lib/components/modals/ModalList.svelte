@@ -8,6 +8,8 @@
 	export let parent: SvelteComponent;
 
 	// Local
+  // TODO: This is a placeholder for a form submission
+  // UNGADOOSH later.
 	let flavor = 'gadoosh';
 	const modalStore = getModalStore();
 

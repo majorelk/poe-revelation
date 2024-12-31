@@ -8,14 +8,25 @@ import { processTableData } from '$lib/utils/processTableData';
 import type { Header } from 'pathofexile-dat/dat.js';
 
 // 🛠️ Utility function for resolving foreign key values
-function resolveForeignKeyValue(value: string | number, referencedTable: any): string {
+function resolveForeignKeyValue(value: string | number, referencedTable: any): any {
   if (Array.isArray(value)) {
-    return value.map((v) => resolveForeignKeyValue(v, referencedTable)).join(', ');
+    return value.map((v) => resolveForeignKeyValue(v, referencedTable));
   }
 
   const referencedRow = referencedTable.rows[String(value)] || referencedTable.rows[Number(value)];
-  return referencedRow ? referencedRow.name || JSON.stringify(referencedRow) : `Missing(${value})`;
+
+  if (!referencedRow) {
+    return `Missing(${value})`;
+  }
+
+  // If referencedRow has a 'name' field, return it. Otherwise, return the full object.
+  if (referencedRow.name) {
+    return referencedRow.name;
+  }
+
+  return referencedRow; // Return the raw object if 'name' does not exist.
 }
+
 
 // 🚀 Page Load Function
 export const load: PageLoad = async ({ fetch, url }) => {
@@ -30,14 +41,13 @@ export const load: PageLoad = async ({ fetch, url }) => {
 
   type ViewerSerializedHeader = Omit<Header, 'length'> & { length?: number; name: string } & { type: { key?: { table?: string; foreign?: boolean } } };
   let headers: ViewerSerializedHeader[] = [];
-  let rows = [];
+  let rows: any[] = [];
   let foreignKeys: ViewerSerializedHeader[] = [];
   let referencedTables: { tableName: string; rows: any; column: { foreign: boolean } }[] = [];
 
   if (browser && schemaTable) {
     const { readDatFile, getHeaderLength, readColumn } = await import('pathofexile-dat/dat.js');
 
-    // ✅ Process Main Table Data
     const result = await processTableData(
       tableName,
       datFiles,
@@ -49,8 +59,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
     );
     headers = result.headers;
     rows = result.rows;
+
     console.log('Processed Table Data:', { headers, rows });
-    
 
     // ✅ Identify Foreign Keys from Headers
     foreignKeys = headers.filter(
@@ -103,7 +113,15 @@ export const load: PageLoad = async ({ fetch, url }) => {
         const foreignKeyValue = row[columnName];
         if (foreignKeyValue === null || foreignKeyValue === undefined) continue;
 
-        row[columnName] = resolveForeignKeyValue(foreignKeyValue, referencedTable);
+        const resolvedValue = resolveForeignKeyValue(foreignKeyValue, referencedTable);
+
+        // Ensure nested objects are preserved
+        row[columnName] = typeof resolvedValue === 'object' ? { ...resolvedValue } : resolvedValue;
+
+        // Also preserve nested arrays of foreign keys
+        if (Array.isArray(resolvedValue)) {
+          row[columnName] = resolvedValue.map((v) => (typeof v === 'object' ? { ...v } : v));
+        }
       }
     }
   }

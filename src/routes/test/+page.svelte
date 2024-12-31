@@ -20,6 +20,28 @@
 	//Init data handler - CLIENT
 	const handler = new DataHandler(data.rows, { rowsPerPage: 10 });
 	const rows = handler.getRows();
+
+	function displayValue(value: any): string {
+		// Check if the value is an object or an array
+		if (value && typeof value === 'object') {
+			return JSON.stringify(value, null, 2); // Pretty-print objects and arrays
+		}
+
+		// Check if the value is a stringified JSON object
+		if (typeof value === 'string') {
+			try {
+				const parsed = JSON.parse(value);
+				if (typeof parsed === 'object' && parsed !== null) {
+					return JSON.stringify(parsed, null, 2);
+				}
+			} catch (e) {
+				// If parsing fails, return the original string
+			}
+		}
+
+		// Return primitive values as is
+		return String(value);
+	}
 </script>
 
 <div class="table-container max-h-[100vh] relative">
@@ -31,14 +53,13 @@
 		<table>
 			<thead>
 				<tr class="bg-slate-900">
-          <th class="p-2 rowCount">Row</th>
+					<th class="p-2 rowCount">Row</th>
 					{#each headers as header, index}
 						<ThSort {handler} orderBy={header}>{header}</ThSort>
 					{/each}
 				</tr>
 				<tr class="bg-slate-900">
-          <th class="p-2 rowCount">
-          </th>
+					<th class="p-2 rowCount"> </th>
 					{#each headers as header, index}
 						<ThFilter {handler} filterBy={header}>{header}</ThFilter>
 					{/each}
@@ -56,7 +77,7 @@
 
 					{#each data.headers as header, index}
 						<td class=" p-2">
-							{row[header.name || `Column_${index}`]}
+							{@html displayValue(row[header.name || `Column_${index}`])}
 						</td>
 					{/each}
 				</tr>
