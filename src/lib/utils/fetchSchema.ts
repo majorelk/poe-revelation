@@ -9,6 +9,18 @@ export async function fetchSchema(fetch: (input: RequestInfo | URL) => Promise<R
   }
 }
 
-export function findTable(schema: SchemaFile, tableName: string): SchemaTable | null {
-  return schema?.tables.find((t) => new RegExp(`^${tableName}$`, 'i').test(t.name)) || null;
+export function findTable(schema: SchemaFile, tableName: string, version: string): SchemaTable | null {
+  let table = schema?.tables.find((t) => {
+    let tableNameRegex = new RegExp(`^${tableName}$`, 'i').test(t.name);
+
+    if (tableNameRegex && t.validFor === parseInt(version, 10)) {
+      return true;
+    }
+  });
+
+  if (!table) {
+    console.warn(`Table not found: ${tableName}`);
+  }
+
+  return table || null;
 }
