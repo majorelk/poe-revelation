@@ -125,11 +125,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
       }
     }
   }
-
-
-  console.log("Rows in load:", rows);
-  console.log("Headers in load:", headers);
-  
   
 
   return {

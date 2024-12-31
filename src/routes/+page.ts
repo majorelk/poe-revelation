@@ -34,7 +34,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   const gameVersion = url.searchParams.get('version') || '1';
 
   let schemaFile = await fetchSchema(fetch);
-  let schemaTable = tableName ? findTable(schemaFile!, tableName) : null;
+  let schemaTable = tableName ? findTable(schemaFile!, tableName, gameVersion) : null;
 
   let { patchUrl, versionNumber } = await fetchVersion(fetch, gameVersion);
   let datFiles = await fetchDatFiles(fetch, patchUrl);
@@ -72,7 +72,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
       foreignKeys.map(async (fk) => {
         try {
           if (fk.type.key?.table) {
-            const refTable = findTable(schemaFile!, fk.type.key.table);
+            const refTable = findTable(schemaFile!, fk.type.key.table, gameVersion);
             if (!refTable) {
               console.warn(`Referenced table schema not found for: ${fk.type.key.table}`);
               return null;
