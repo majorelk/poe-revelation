@@ -92,7 +92,7 @@
 |intelligence_percent = 100
 |gem_tags = ${gemTags}
 |gem_description = ${cleanDescription}
-|skill_id = ${skill.Id}
+|skill_id = ${skill.DisplayedName}
 |cast_time = 0.70
 |required_level = 1
 |static_cost_types = Mana
