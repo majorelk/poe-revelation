@@ -22,6 +22,15 @@
 		Output_StatKeys: { Id: string; Text?: string }[];
 	}
 
+	function parseDescription(description: string): string {
+		if (!description) return '';
+
+		return description
+			.replace(/\[.*?\|/g, '') // Remove text inside square brackets before a pipe
+			.replace(/[\[\]]/g, '') // Remove any remaining square brackets
+			.trim();
+	}
+
 	// ✅ Build a Set of Valid Tags from gemTags
 	const validTags = new Set(gemTags.map((tag) => tag.Id));
 
@@ -68,6 +77,7 @@
 		const metadataId = buildMetadataId(skill.Id);
 		const statText = parseStatText([...skill.Input_StatKeys, ...skill.Output_StatKeys]);
 		const iconPath = skill.Icon_DDSFile.replace('Art/2DArt/', '');
+		const cleanDescription = parseDescription(skill.Description);
 
 		return `{{Item
 |rarity_id = normal
@@ -81,7 +91,7 @@
 |help_text = Skills can be managed in the Skills Panel.
 |intelligence_percent = 100
 |gem_tags = ${gemTags}
-|gem_description = ${skill.Description}
+|gem_description = ${cleanDescription}
 |skill_id = ${skill.Id}
 |cast_time = 0.70
 |required_level = 1
