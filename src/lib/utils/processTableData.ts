@@ -112,7 +112,7 @@ export async function processTableData(
     // Process rows in batches
     for (let i = 0; i < totalRows; i += batchSize) {
       const batchRows = [];
-      console.log(`Processing rows ${i} to ${Math.min(i + batchSize, totalRows)}...`);
+      // console.log(`Processing rows ${i} to ${Math.min(i + batchSize, totalRows)}...`);
 
       for (let j = i; j < Math.min(i + batchSize, totalRows); j++) {
         const row: any = {};
