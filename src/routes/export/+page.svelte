@@ -737,7 +737,7 @@
 
 		while (i < lines.length) {
 			if (lines[i] === 'description') {
-				i++; // Move to stat line
+				i++; // Move to stats line
 				const statLine = lines[i].split(' ');
 				const statCount = parseInt(statLine[0], 10);
 				const stats = statLine.slice(1); // Collect all stat IDs
@@ -749,12 +749,14 @@
 				let description = '';
 				for (let j = 0; j < descriptionCount; j++) {
 					if (i < lines.length && /^\d+\|#\s\d+\s/.test(lines[i])) {
-						// Handle lines starting with "2|# 0"
-						const [, , desc] = lines[i].split(/"\s*/);
-						description += desc?.replace(/^"|"$/g, '') + ' ';
+						// Handle lines like `2|# 0 "Fires {0} [Projectile|Projectiles]"`
+						const parts = lines[i].split('"');
+						if (parts.length > 1) {
+							description += parts[1] + ' ';
+						}
 						i++;
 					} else if (i < lines.length && lines[i].startsWith('#')) {
-						// Handle lines starting with "#"
+						// Handle traditional `# "Description"` lines
 						description += lines[i].replace(/^#*\s*/, '').replace(/^"|"$/g, '') + ' ';
 						i++;
 					} else {
@@ -772,17 +774,18 @@
 	}
 
 	// Find a description for a stat ID
-	function findDescription(
-		statId: string,
-		blocks: { stats: string[]; description: string }[]
-	): string | null {
-		for (const block of blocks) {
-			if (block.stats.includes(statId) && block.description.trim() !== '') {
-				return block.description;
-			}
+function findDescription(
+	statId: string,
+	blocks: { stats: string[]; description: string }[]
+): string | null {
+	for (const block of blocks) {
+		if (block.stats.includes(statId) && block.description.trim() !== '') {
+			return block.description;
 		}
-		return null;
 	}
+	return null;
+}
+
 
 	// Replace placeholders in description
 	function formatDescription(template: string, values: string[]): string {
