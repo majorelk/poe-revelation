@@ -780,14 +780,23 @@
 		return blocks;
 	}
 
+	function validateStat(stat: { Id: string; Semantic: number }): boolean {
+		// Basic validation using stat properties
+		return !!stat.Id && stat.Semantic !== undefined;
+	}
+
 	// Replace placeholders in description
 	function formatDescription(template: string, values: string[]): string {
-		return template.replace(/{(\d+)}/g, (_, index) => values[index] || `{${index}}`);
+		return template
+			.replace(/{(\d+)}/g, (_, index) => values[index] || `{${index}}`)
+			.replace(/(\d+)% increased/g, '$1% increased')
+			.replace(/(\d+)% reduced/g, '$1% reduced')
+			.trim();
 	}
 
 	function processStats(
-		statsArray: { Id: string }[],
-		valuesArray: string[],
+		statsArray: { Id: string; Semantic: number }[],
+		valuesArray: (string | number)[],
 		parsedBlocks: { stats: string[]; description: string }[],
 		processedStats: Set<string>,
 		type: 'FloatStat' | 'AdditionalStat'
@@ -800,26 +809,60 @@
 		console.log(`🔄 Processing ${type}:`, statsArray);
 		console.log(`🔄 Using Values:`, valuesArray);
 
-		statsArray.forEach((stat, index) => {
+    statsArray.forEach((stat, index) => {
 			const statId = stat.Id.trim();
+      console.log("Stat ID:", statId, index);
+      
 
-			// Skip already processed stats
+			// Skip if already processed
 			if (processedStats.has(statId)) {
 				return;
 			}
 
-			console.log(`🔍 Searching for COCKS ${type} ID:`, statId);
+			console.log(`🔍 Searching for ${type} ID:`, statId);
 
-			// Find matching description block
+			// Match stat description block
+      
 			const block = parsedBlocks.find((b) => b.stats.includes(statId));
+            
 
 			if (block && block.description.trim() !== '') {
 				// Mark all stats in this block as processed
 				block.stats.forEach((s) => processedStats.add(s));
 
-				// Replace placeholders with values
-				const resolvedValues = valuesArray.length > 0 ? valuesArray : ['N/A'];
-				const formattedDescription = formatDescription(block.description, resolvedValues);
+				// Prepare values dynamically
+				const resolvedValues = block.stats.map((_, i) => {
+					const value = valuesArray[index + i];
+					// Ensure `0` is treated as valid, only null/undefined is replaced with `N/A`
+					return value !== undefined && value !== null ? value : 'N/A';
+				});
+
+				// Handle Semantic-based formatting
+				resolvedValues.forEach((value, i) => {
+					switch (stat.Semantic) {
+						case 1: // Percentage-based stat
+							resolvedValues[i] = `${value}%`;
+							break;
+						case 3: // Numeric stat
+							resolvedValues[i] = `${value}`;
+							break;
+						case 4: // Boolean/Flag stat
+							resolvedValues[i] = value === '1' ? 'Enabled' : 'Disabled';
+							break;
+						default:
+							break;
+					}
+				});
+
+				// Replace placeholders with corresponding values
+				let formattedDescription = formatDescription(block.description, resolvedValues.map(String));
+
+
+        // console.log("Block stats:", block.stats);
+        // // remove any stats from the block that dont match statId
+        // block.stats = block.stats.filter((s) => s === statId);
+        
+        // console.log("Block stats after filter:", block.stats);
 
 				console.log(`✅ Matched ${type} Stats: "${block.stats.join(', ')}"`);
 				console.log(`📝 Formatted ${type} Description: "${formattedDescription}"`);
@@ -837,7 +880,7 @@
 		const parsedBlocks = parseStatDescriptions(statDescriptions);
 		console.log('📦 Parsed Blocks:', parsedBlocks);
 
-		// Find and format descriptions
+		// Find the relevant stat set for this skill
 		const sparkPlayerStatSet = grantedEffectsStatSetsPerLevel.find(
 			(statSet) => statSet.StatSet.Id === 'SparkPlayer'
 		);
@@ -849,25 +892,36 @@
 
 		console.log('🔍 Found StatSet:', sparkPlayerStatSet);
 
-		const processedStats = new Set<string>(); // Track processed stats to avoid duplicates
+		// 🛠️ Delegate stat processing to handleStatsProcessing
+		handleStatsProcessing(sparkPlayerStatSet, parsedBlocks);
+	}
 
-		// 📊 Process FloatStats
-		processStats(
-			sparkPlayerStatSet.FloatStats,
-			sparkPlayerStatSet.BaseResolvedValues,
-			parsedBlocks,
-			processedStats,
-			'FloatStat'
-		);
+	function handleStatsProcessing(statSet: any, parsedBlocks: any) {
+		const processedStats = new Set<string>();
 
-		// 📊 Process AdditionalStats
-		processStats(
-			sparkPlayerStatSet.AdditionalStats,
-			sparkPlayerStatSet.AdditionalStatsValues,
-			parsedBlocks,
-			processedStats,
-			'AdditionalStat'
-		);
+		// Validate and process FloatStats
+		if (statSet?.FloatStats) {
+			const validFloatStats = statSet.FloatStats.filter(validateStat);
+			processStats(
+				validFloatStats,
+				statSet.BaseResolvedValues || [],
+				parsedBlocks,
+				processedStats,
+				'FloatStat'
+			);
+		}
+
+		// Validate and process AdditionalStats
+		if (statSet?.AdditionalStats) {
+			const validAdditionalStats = statSet.AdditionalStats.filter(validateStat);
+			processStats(
+				validAdditionalStats,
+				statSet.AdditionalStatsValues || [],
+				parsedBlocks,
+				processedStats,
+				'AdditionalStat'
+			);
+		}
 	}
 
 	onMount(async () => {
