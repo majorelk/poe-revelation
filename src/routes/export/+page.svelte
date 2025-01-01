@@ -748,7 +748,14 @@
 
 				let description = '';
 				for (let j = 0; j < descriptionCount; j++) {
-					if (i < lines.length && /^\d+\|#\s\d+\s/.test(lines[i])) {
+					// Handle lines like `#|-1 "{0}% reduced [Projectile] Speed" negate 1`
+					if (i < lines.length && /^\d+\|#/.test(lines[i])) {
+						const parts = lines[i].split('"');
+						if (parts.length > 1) {
+							description += parts[1] + ' ';
+						}
+						i++;
+					} else if (i < lines.length && /^\d+\|#\s\d+\s/.test(lines[i])) {
 						// Handle lines like `2|# 0 "Fires {0} [Projectile|Projectiles]"`
 						const parts = lines[i].split('"');
 						if (parts.length > 1) {
@@ -772,20 +779,6 @@
 
 		return blocks;
 	}
-
-	// Find a description for a stat ID
-function findDescription(
-	statId: string,
-	blocks: { stats: string[]; description: string }[]
-): string | null {
-	for (const block of blocks) {
-		if (block.stats.includes(statId) && block.description.trim() !== '') {
-			return block.description;
-		}
-	}
-	return null;
-}
-
 
 	// Replace placeholders in description
 	function formatDescription(template: string, values: string[]): string {
@@ -815,7 +808,7 @@ function findDescription(
 				return;
 			}
 
-			console.log(`🔍 Searching for ${type} ID:`, statId);
+			console.log(`🔍 Searching for COCKS ${type} ID:`, statId);
 
 			// Find matching description block
 			const block = parsedBlocks.find((b) => b.stats.includes(statId));
