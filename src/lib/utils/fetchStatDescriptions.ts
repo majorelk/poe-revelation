@@ -43,7 +43,7 @@ export async function fetchStatDescriptions(
 }
 
 // Helper function to filter English content
-function filterEnglishContent(data: string): string {
+export function filterEnglishContent(data: string): string {
   // Remove all blocks starting with lang "<language>" until the next description or lang block
   return data.replace(/lang ".*?"[\s\S]*?(?=(lang "|description|$))/g, '');
 }
