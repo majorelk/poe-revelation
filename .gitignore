@@ -23,3 +23,5 @@ vite.config.ts.timestamp-*
 # Local schema
 # schema.min.json
 TODO
+.devcontainer/.devcontainer.json
+.devcontainer/devcontainer.json
