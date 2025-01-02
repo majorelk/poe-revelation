@@ -735,8 +735,7 @@
 		values: string[];
 	}
 
-
-  // TODO: handle the `no_desciption` case or just ignore it
+	// TODO: handle the `no_desciption` case or just ignore it
 	// Parse statDescriptions into blocks
 	function parseStatDescriptions(data: string): StatBlock[] {
 		const lines = data
@@ -815,10 +814,18 @@
 
 			// Find matching stat block
 			// const block = parsedBlocks.find((b) => b.stats.includes(statId));
+			// console.log('block:', block);
+
 			// b.stats is also an array, so we need to check if the statId is included in the array
 			const block = parsedBlocks.find((b) => {
-				// console.log('b.stats:', b.stats);
-				// b.stats is an object with the key stats which is an array of strings - this is what we need to check
+				// console.log('🔍 Checking Block:', b.stats);
+				return b.stats.some((s) => {
+					// console.log(`   🔄 Checking stat "${s}" against "${statId}"`);
+					return (
+						s.includes(statId) ||
+						new RegExp(`\\b${statId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(s)
+					);
+				});
 			});
 
 			if (block) {
