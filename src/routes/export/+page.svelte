@@ -729,53 +729,57 @@
 }}`;
 	}
 
+	interface StatBlock {
+		stats: string[];
+		descriptions: string[];
+		values: string[];
+	}
+
+	// TODO: handle the `no_desciption` case or just ignore it
 	// Parse statDescriptions into blocks
-	function parseStatDescriptions(data: string) {
-		const lines = data.split('\n').map((line) => line.trim());
-		const blocks: { stats: string[]; description: string }[] = [];
-		let i = 0;
+	function parseStatDescriptions(data: string): StatBlock[] {
+		const lines = data
+			.split('\n')
+			.map((line) => line.trim())
+			.filter((line) => line);
+		const blocks: StatBlock[] = [];
+		let currentBlock: StatBlock | null = null;
 
-		while (i < lines.length) {
-			if (lines[i] === 'description') {
-				i++; // Move to stats line
-				const statLine = lines[i].split(' ');
-				const statCount = parseInt(statLine[0], 10);
-				const stats = statLine.slice(1); // Collect all stat IDs
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
 
-				i++; // Move to description count
-				const descriptionCount = parseInt(lines[i], 10);
-				i++; // Move to description lines
+			// 1. Start of a new block
+			if (line.startsWith('description')) {
+				if (currentBlock) blocks.push(currentBlock); // Save the previous block
+				currentBlock = { stats: [], values: [], descriptions: [] };
+				continue;
+			}
 
-				let description = '';
-				for (let j = 0; j < descriptionCount; j++) {
-					// Handle lines like `#|-1 "{0}% reduced [Projectile] Speed" negate 1`
-					if (i < lines.length && /^\d+\|#/.test(lines[i])) {
-						const parts = lines[i].split('"');
-						if (parts.length > 1) {
-							description += parts[1] + ' ';
-						}
-						i++;
-					} else if (i < lines.length && /^\d+\|#\s\d+\s/.test(lines[i])) {
-						// Handle lines like `2|# 0 "Fires {0} [Projectile|Projectiles]"`
-						const parts = lines[i].split('"');
-						if (parts.length > 1) {
-							description += parts[1] + ' ';
-						}
-						i++;
-					} else if (i < lines.length && lines[i].startsWith('#')) {
-						// Handle traditional `# "Description"` lines
-						description += lines[i].replace(/^#*\s*/, '').replace(/^"|"$/g, '') + ' ';
-						i++;
-					} else {
-						break;
-					}
-				}
+			// 2. Parse Stat (1st line after 'description')
+			if (currentBlock && currentBlock.stats.length === 0) {
+				currentBlock.stats.push(line);
+				continue;
+			}
 
-				blocks.push({ stats, description: description.trim() });
-			} else {
-				i++;
+			// 3. Parse Value (2nd line after 'description')
+			if (
+				currentBlock &&
+				currentBlock.stats.length > 0 &&
+				currentBlock.values.length === 0 &&
+				/^\d+$/.test(line)
+			) {
+				currentBlock.values.push(line);
+				continue;
+			}
+
+			// 4. Parse Description Text (remaining lines until next 'description')
+			if (currentBlock) {
+				currentBlock.descriptions.push(line);
 			}
 		}
+
+		// Push the last block if it exists
+		if (currentBlock) blocks.push(currentBlock);
 
 		return blocks;
 	}
@@ -787,18 +791,15 @@
 
 	// Replace placeholders in description
 	function formatDescription(template: string, values: string[]): string {
-		return template
-			.replace(/{(\d+)}/g, (_, index) => values[index] || `{${index}}`)
-			.replace(/(\d+)% increased/g, '$1% increased')
-			.replace(/(\d+)% reduced/g, '$1% reduced')
-			.trim();
+		return template.replace(/{(\d+)}/g, (_, index) => values[index] || `{${index}}`).trim();
 	}
 
 	function processStats(
 		statsArray: { Id: string; Semantic: number }[],
 		valuesArray: (string | number)[],
-		parsedBlocks: { stats: string[]; description: string }[],
+		parsedBlocks: StatBlock[],
 		processedStats: Set<string>,
+		processedBlocks: Set<string>, // Track processed blocks
 		type: 'FloatStat' | 'AdditionalStat'
 	) {
 		if (!statsArray || statsArray.length === 0) {
@@ -807,64 +808,108 @@
 		}
 
 		console.log(`🔄 Processing ${type}:`, statsArray);
-		console.log(`🔄 Using Values:`, valuesArray);
 
-    statsArray.forEach((stat, index) => {
+		statsArray.forEach((stat, index) => {
 			const statId = stat.Id.trim();
-      console.log("Stat ID:", statId, index);
-      
+			if (processedStats.has(statId)) return;
 
-			// Skip if already processed
-			if (processedStats.has(statId)) {
-				return;
-			}
+			// Find matching block
+			const block = parsedBlocks.find((b) => {
+				return b.stats.some((s) => s.includes(statId));
+			});
 
-			console.log(`🔍 Searching for ${type} ID:`, statId);
+			if (block) {
+				// Check if the block was already processed
+				const blockKey = block.stats.join('|'); // Unique key for the block
+				if (processedBlocks.has(blockKey)) {
+					console.warn(`⚠️ Block already processed: "${blockKey}"`);
+					return;
+				}
+				processedBlocks.add(blockKey); // Mark block as processed
 
-			// Match stat description block
-      
-			const block = parsedBlocks.find((b) => b.stats.includes(statId));
-            
+				processedStats.add(statId);
 
-			if (block && block.description.trim() !== '') {
-				// Mark all stats in this block as processed
-				block.stats.forEach((s) => processedStats.add(s));
+				console.log(`✅ Matched ${type} Stats: "${block.stats.join(', ')}"`);
+				console.log(`📝 Raw Descriptions:`, block.descriptions);
 
-				// Prepare values dynamically
-				const resolvedValues = block.stats.map((_, i) => {
-					const value = valuesArray[index + i];
-					// Ensure `0` is treated as valid, only null/undefined is replaced with `N/A`
-					return value !== undefined && value !== null ? value : 'N/A';
-				});
+				// Parse the first stat to see if it has a numeric prefix
+				const statMatch = block.stats[0].match(/^(\d+)\s+(.*)/);
+				let statCount = 1; // Default to 1 stat if no number prefix
 
-				// Handle Semantic-based formatting
-				resolvedValues.forEach((value, i) => {
+				if (statMatch) {
+					statCount = parseInt(statMatch[1], 10); // Extract stat count from prefix
+				}
+
+				// Slice the relevant stats and values
+				const relevantStats = block.stats.slice(0, statCount);
+				const relevantValues = valuesArray.slice(index, index + statCount);
+
+				// Match the relevant stat with the block.description based on the index of the stat
+				console.log('relevantStats', relevantStats);
+
+				// Flatten the relevant stats into a single array of IDs
+				const relevantStatsArray = relevantStats.flatMap(
+					(stat) => stat.split(' ').slice(1) // Remove prefixes and keep stat IDs
+				);
+				console.log('relevantStatsArray (flattened)', relevantStatsArray);
+
+				// Match descriptions based on stats count and placeholders
+				const matchedDescription =
+					block.descriptions.find((description) => {
+						// Match multi-stat patterns
+						const match = description.match(/^# #\s+"(.+)"$/);
+						if (match) {
+							console.log('Matched Multi-Stat Pattern', match[1]);
+							return true;
+						}
+
+						// Match single-stat patterns
+						const indexMatch = description.match(/^(\d+)\|#(?:\s(\d+))?/);
+						if (indexMatch) {
+							const blockIndex = parseInt(indexMatch[2] || '0', 10);
+							console.log('blockIndex', blockIndex);
+							return blockIndex === index; // Compare with current stat index
+						}
+
+						return false;
+					}) || '';
+
+				console.log('matchedDescription', matchedDescription);
+
+				// Handle Multi-Stat Placeholders
+				let formattedDescription = matchedDescription;
+
+				// Handle multiple stats (e.g., min and max damage)
+				if (matchedDescription.includes('{0}') && matchedDescription.includes('{1}')) {
+					// Extract multiple values for replacements
+					const relevantValues = valuesArray.slice(index, index + relevantStatsArray.length);
+					console.log('relevantValues (for multi-stat replacement)', relevantValues);
+
+					formattedDescription = formatDescription(matchedDescription, relevantValues.map(String));
+				} else {
+					// Fallback to single replacement if only one stat
+					formattedDescription = formatDescription(matchedDescription, [
+						valuesArray[index]?.toString() || ''
+					]);
+				}
+
+				// Handle Semantic formatting
+				relevantValues.forEach((value, i) => {
 					switch (stat.Semantic) {
-						case 1: // Percentage-based stat
-							resolvedValues[i] = `${value}%`;
+						case 1:
+							relevantValues[i] = `${value}%`;
 							break;
-						case 3: // Numeric stat
-							resolvedValues[i] = `${value}`;
+						case 3:
+							relevantValues[i] = `${value}`;
 							break;
-						case 4: // Boolean/Flag stat
-							resolvedValues[i] = value === '1' ? 'Enabled' : 'Disabled';
+						case 4:
+							relevantValues[i] = value === '1' ? 'Enabled' : 'Disabled';
 							break;
 						default:
 							break;
 					}
 				});
 
-				// Replace placeholders with corresponding values
-				let formattedDescription = formatDescription(block.description, resolvedValues.map(String));
-
-
-        // console.log("Block stats:", block.stats);
-        // // remove any stats from the block that dont match statId
-        // block.stats = block.stats.filter((s) => s === statId);
-        
-        // console.log("Block stats after filter:", block.stats);
-
-				console.log(`✅ Matched ${type} Stats: "${block.stats.join(', ')}"`);
 				console.log(`📝 Formatted ${type} Description: "${formattedDescription}"`);
 			} else {
 				console.warn(`❌ No description found for ${type} ID: ${statId}`);
@@ -881,25 +926,21 @@
 		console.log('📦 Parsed Blocks:', parsedBlocks);
 
 		// Find the relevant stat set for this skill
-		const sparkPlayerStatSet = grantedEffectsStatSetsPerLevel.find(
-			(statSet) => statSet.StatSet.Id === 'SparkPlayer'
-		);
+		const statSet = grantedEffectsStatSetsPerLevel.find((set) => set.StatSet.Id === 'SparkPlayer');
 
-		if (!sparkPlayerStatSet) {
+		if (!statSet) {
 			console.warn('❌ No StatSet found for SparkPlayer.');
 			return;
 		}
 
-		console.log('🔍 Found StatSet:', sparkPlayerStatSet);
-
-		// 🛠️ Delegate stat processing to handleStatsProcessing
-		handleStatsProcessing(sparkPlayerStatSet, parsedBlocks);
+		console.log('🔍 Found StatSet:', statSet);
+		handleStatsProcessing(statSet, parsedBlocks);
 	}
 
-	function handleStatsProcessing(statSet: any, parsedBlocks: any) {
+	function handleStatsProcessing(statSet: any, parsedBlocks: StatBlock[]) {
 		const processedStats = new Set<string>();
+		const processedBlocks = new Set<string>();
 
-		// Validate and process FloatStats
 		if (statSet?.FloatStats) {
 			const validFloatStats = statSet.FloatStats.filter(validateStat);
 			processStats(
@@ -907,11 +948,11 @@
 				statSet.BaseResolvedValues || [],
 				parsedBlocks,
 				processedStats,
+				processedBlocks,
 				'FloatStat'
 			);
 		}
 
-		// Validate and process AdditionalStats
 		if (statSet?.AdditionalStats) {
 			const validAdditionalStats = statSet.AdditionalStats.filter(validateStat);
 			processStats(
@@ -919,6 +960,7 @@
 				statSet.AdditionalStatsValues || [],
 				parsedBlocks,
 				processedStats,
+				processedBlocks,
 				'AdditionalStat'
 			);
 		}
