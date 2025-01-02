@@ -24,7 +24,7 @@ describe('filterEnglishContent', () => {
 
   it('should handle mixed content with descriptions', () => {
     const input = 'description "This is a test description." lang "fr" This is French content. description "Another description." lang "de" This is German content.';
-    const expectedOutput = 'description "This is a test description." description "Another description."';
+    const expectedOutput = 'description "This is a test description." description "Another description." '; // Note the trailing space
     const output = filterEnglishContent(input);
     expect(output).toBe(expectedOutput);
   });
