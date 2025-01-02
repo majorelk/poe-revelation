@@ -3,7 +3,7 @@ import type { DatFile, Header } from 'pathofexile-dat/dat.js';
 
 type ViewerSerializedHeader = Omit<Header, 'length'> & { length?: number, name: string };
 
-const FIELD_SIZE = {
+export const FIELD_SIZE = {
   BOOL: 1,
   BYTE: 1,
   SHORT: 2,
@@ -16,7 +16,7 @@ const FIELD_SIZE = {
 };
 
 // Map schema columns to ViewerSerializedHeaders
-async function fromPublicSchema(
+export async function fromPublicSchema(
   sch: SchemaTable,
   getHeaderLength: (header: Pick<Header, 'type'>, datFile: DatFile) => number
 ): Promise<ViewerSerializedHeader[]> {
