@@ -39,14 +39,23 @@
 			.trim();
 	}
 
-	// Function to get the granted effect from the ID
+  // Function to get the cast time from the granted effect
 	function getCastTime(id: string): string {
 		const effect = grantedEffects.find((effect) => effect.Id === id);
-		console.log('Index of Effect:', grantedEffects.indexOf(effect));
-		// console.log(grantedEffectsPerLevel[grantedEffects.indexOf(effect)]);
-		// getGrantedEffectPerLevel(grantedEffects.indexOf(effect));
 
-		if (!effect) return effect.CastTime;
+		// Check if the effect exists
+		if (!effect) {
+			console.warn(`⚠️ No granted effect found for ID: ${id}`);
+			return 'N/A'; // Default fallback if effect is missing
+		}
+
+		// Check if CastTime exists and is a valid number
+		if (typeof effect.CastTime !== 'number' || isNaN(effect.CastTime)) {
+			console.warn(`⚠️ CastTime is missing or invalid for effect ID: ${id}`);
+			return 'N/A'; // Default fallback if CastTime is invalid
+		}
+
+		// Safely return formatted CastTime
 		const castTime = effect.CastTime / 1000;
 		return castTime.toFixed(2);
 	}
@@ -219,12 +228,14 @@
 			if (block) {
 				// Check if the block was already processed
 				const blockKey = block.stats.join('|'); // Unique key for the block
+
 				if (processedBlocks.has(blockKey)) {
 					console.warn(`⚠️ Block already processed: "${blockKey}"`);
 					return;
 				}
-				processedBlocks.add(blockKey); // Mark block as processed
 
+				// Ensure we don't mark the block as processed prematurely
+				// Only add it after a successful match
 				processedStats.add(statId);
 
 				console.log(`✅ Matched ${type} Stats: "${block.stats.join(', ')}"`);
@@ -238,60 +249,28 @@
 					statCount = parseInt(statMatch[1], 10); // Extract stat count from prefix
 				}
 
-				// Before slicing the relevant stats and values
-				const isSingleStatWithNegate = block.descriptions.some((description) =>
-					description.includes('negate')
-				);
-
-				let matchedDescription = '';
-				let statValue = valuesArray[index];
-				let statValueAsNumber = Number(statValue); // Ensure numeric comparison
-
-				if (isSingleStatWithNegate) {
-					console.log('⚖️ Handling polarity-based descriptions');
-
-					// Separate positive and negative descriptions
-					const positiveDescription = block.descriptions.find((desc) => !desc.includes('negate'));
-					const negativeDescription = block.descriptions.find((desc) => desc.includes('negate'));
-
-					// Select description based on value polarity
-					if (statValueAsNumber >= 0 && positiveDescription) {
-						console.log('✅ Positive value detected, using positive description');
-						matchedDescription = positiveDescription;
-					} else if (statValueAsNumber < 0 && negativeDescription) {
-						console.log('🛑 Negative value detected, using negative description');
-						matchedDescription = negativeDescription;
-					} else {
-						console.warn('⚠️ No matching description for value polarity');
-					}
-				}
-
-				// Slice the relevant stats and values
+				// Ensure we slice correctly for multi-stat handling
 				const relevantStats = block.stats.slice(0, statCount);
 				const relevantValues = valuesArray.slice(index, index + statCount);
 
-				// If no specific polarity-based description was selected, fallback to standard matching
-				if (!matchedDescription) {
-					matchedDescription =
-						block.descriptions.find((description) => {
-							const match = description.match(/^(\d+)\|#(?:\s(\d+))?/);
-							if (match) {
-								const blockIndex = parseInt(match[2] || '0', 10);
-								return blockIndex === index;
-							}
-							return false;
-						}) || '';
-				}
+				console.log('📊 relevantStats:', relevantStats);
+				console.log('📊 relevantValues:', relevantValues);
 
-				console.log('📝 Final Matched Description:', matchedDescription);
+				// Match the description
+				let matchedDescription =
+					block.descriptions.find((description) => {
+						return description.includes('{0}') && description.includes('{1}');
+					}) || block.descriptions[0]; // Fallback to the first description
 
-				// Handle Multi-Stat Placeholders
+				console.log('📝 Matched Description:', matchedDescription);
+
+				// Ensure placeholders {0} and {1} are correctly replaced
 				let formattedDescription = matchedDescription;
 
 				if (matchedDescription.includes('{0}') && matchedDescription.includes('{1}')) {
-					const multiStatValues = valuesArray.slice(index, index + relevantStats.length);
-					formattedDescription = formatDescription(matchedDescription, multiStatValues.map(String));
+					formattedDescription = formatDescription(matchedDescription, relevantValues.map(String));
 				} else {
+					// Fallback to single value replacement if {0} or {1} is missing
 					formattedDescription = formatDescription(matchedDescription, [
 						valuesArray[index]?.toString() || ''
 					]);
@@ -314,6 +293,9 @@
 					}
 				});
 
+				// Only mark as processed after successful formatting
+				processedBlocks.add(blockKey);
+
 				console.log(`📝 Formatted ${type} Description: "${formattedDescription}"`);
 			} else {
 				console.warn(`❌ No description found for ${type} ID: ${statId}`);
@@ -327,13 +309,13 @@
 
 		// Parse descriptions into structured blocks
 		const parsedBlocks = parseStatDescriptions(statDescriptions);
-		console.log('📦 Parsed Blocks:', parsedBlocks);
+		console.log('📦 Parsed Blocks:', parsedBlocks);    
 
 		// Find the relevant stat set for this skill
 		const statSet = grantedEffectsStatSetsPerLevel.find((set) => set.StatSet.Id === skillId);
 
 		if (!statSet) {
-      console.warn('❌ No StatSet found for skill ID:', skillId);
+			console.warn('❌ No StatSet found for skill ID:', skillId);
 			return;
 		}
 
@@ -385,7 +367,14 @@
 		console.log('Store Data:', storeData);
 
 		let path = storeData?.StatDescription;
-    let skillId = storeData?.GrantedEffect;
+		let skillId = storeData?.GrantedEffect;
+
+    if (skillId && !skillId.includes('Player')) {
+      skillId = `${skillId}Player`;
+    }
+
+
+    // TODO: continue here!
 		await getStatDescriptions(path, skillId);
 
 		if (storeData) {
