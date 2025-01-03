@@ -2,7 +2,9 @@
 	import { rowStore } from '$lib/stores/rowStore';
 	import { fetchStatDescriptions } from '$lib/utils/fetchStatDescriptions.js';
 	import { fetchVersion } from '$lib/utils/fetchVersion.js';
+	import { mockData } from '$lib/utils/mockDataSpark.js';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 
 	let message = 'Export completed!';
 	let rowData: any = {};
@@ -16,614 +18,6 @@
 	const grantedEffectsStatSetsPerLevel = data?.allData.GrantedEffectStatSetsPerLevel?.rows || [];
 	// TODO: do we need this?
 	// const grantedEffectsPerLevel = data?.allData.GrantedEffectsPerLevel?.rows || [];
-
-	let mockData = {
-		Id: 'spark',
-		DisplayedName: 'Spark',
-		Description:
-			'Launches a spray of sparking [Projectile|Projectiles] that travel erratically along the ground until they hit an enemy or expire.',
-		ActionType: {
-			Id: 'Spark',
-			Column_1: 30809,
-			Column_2: true,
-			Column_3: false,
-			Column_4: false,
-			Column_5: false
-		},
-		Icon_DDSFile: 'Art/2DArt/SkillIcons/SorceressSpark.dds',
-		ActiveSkillTargetTypes: [1, 2],
-		ActiveSkillTypes: [
-			{
-				Id: 'Spell',
-				FlagStat: 424
-			},
-			{
-				Id: 'Projectile',
-				FlagStat: 6009
-			},
-			{
-				Id: 'ProjectilesFromUser',
-				FlagStat: null
-			},
-			{
-				Id: 'Damage',
-				FlagStat: null
-			},
-			{
-				Id: 'Duration',
-				FlagStat: null
-			},
-			{
-				Id: 'Trappable',
-				FlagStat: null
-			},
-			{
-				Id: 'Totemable',
-				FlagStat: null
-			},
-			{
-				Id: 'Mineable',
-				FlagStat: null
-			},
-			{
-				Id: 'Multicastable',
-				FlagStat: null
-			},
-			{
-				Id: 'Triggerable',
-				FlagStat: 8772
-			},
-			{
-				Id: 'Lightning',
-				FlagStat: 2684
-			},
-			{
-				Id: 'CanRapidFire',
-				FlagStat: null
-			},
-			{
-				Id: 'Invokable',
-				FlagStat: 18314
-			},
-			{
-				Id: 'Nonpathing',
-				FlagStat: null
-			}
-		],
-		WeaponRestriction_ItemClasses: [],
-		WebsiteDescription:
-			'Lightning is a fickle servant. However, skilled casters have learned to harness this frenetic element to devastating effect. With a single incantation, two pulsing strands of electric energy appear, and begin to move erratically around the battlefield. Whenever one contacts an enemy, it discharges, dealing tremendous damage and frequently causing paralysis.',
-		WebsiteImage: 'http://s3.amazonaws.com/pathofexile/image/skills/intelligence/spark.jpg',
-		HideOnWebsite: false,
-		GrantedEffect: 'SparkPlayer',
-		Column_12: false,
-		SkillTotemId: 25,
-		IsManuallyCasted: true,
-		Input_Stats: [
-			{
-				Id: 'spark_damage_+%',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 1,
-				Text: '',
-				Column_6: false,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 670464211,
-				BelongsActiveSkills: [
-					'spark',
-					'unique_earthbound_triggered_spark',
-					'vaal_spark',
-					'monster_spark'
-				],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'spark_num_of_additional_projectiles',
-				Column_1: true,
-				IsLocal: true,
-				IsWeaponLocal: false,
-				Semantic: 3,
-				Text: '',
-				Column_6: true,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 4067285362,
-				BelongsActiveSkills: [
-					'spark',
-					'unique_earthbound_triggered_spark',
-					'vaal_spark',
-					'monster_spark'
-				],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'spark_projectile_speed_+%',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 1,
-				Text: '',
-				Column_6: false,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 1666436661,
-				BelongsActiveSkills: [
-					'spark',
-					'unique_earthbound_triggered_spark',
-					'vaal_spark',
-					'monster_spark'
-				],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'spark_num_of_additional_projectiles_in_chain',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 3,
-				Text: '',
-				Column_6: false,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 2216266023,
-				BelongsActiveSkills: [
-					'spark',
-					'unique_earthbound_triggered_spark',
-					'vaal_spark',
-					'monster_spark'
-				],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'spark_projectiles_nova',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 3,
-				Text: '',
-				Column_6: false,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 1162818849,
-				BelongsActiveSkills: [
-					'spark',
-					'unique_earthbound_triggered_spark',
-					'vaal_spark',
-					'monster_spark'
-				],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'spark_number_of_additional_projectiles',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 3,
-				Text: '',
-				Column_6: false,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 3357886255,
-				BelongsActiveSkills: [
-					'spark',
-					'unique_earthbound_triggered_spark',
-					'vaal_spark',
-					'monster_spark'
-				],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'spark_skill_effect_duration_+%',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 1,
-				Text: '',
-				Column_6: false,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 1564790257,
-				BelongsActiveSkills: [
-					'spark',
-					'unique_earthbound_triggered_spark',
-					'vaal_spark',
-					'monster_spark'
-				],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'spark_totems_from_this_skill_grant_totemified_lightning_tendrils_larger_pulse_interval_-X_to_parent',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 3,
-				Text: '',
-				Column_6: false,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 359226739,
-				BelongsActiveSkills: [
-					'spark',
-					'unique_earthbound_triggered_spark',
-					'vaal_spark',
-					'monster_spark'
-				],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'totemified_spark_skill_effect_duration_+%',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 1,
-				Text: '',
-				Column_6: true,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 4040446272,
-				BelongsActiveSkills: [
-					'spark',
-					'unique_earthbound_triggered_spark',
-					'vaal_spark',
-					'monster_spark'
-				],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			}
-		],
-		Output_Stats: [
-			{
-				Id: 'damage_+%',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 1,
-				Text: 'All Damage',
-				Column_6: false,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 3125968493,
-				BelongsActiveSkills: [],
-				Category: 1,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'number_of_additional_projectiles',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 3,
-				Text: 'Additional Projectiles',
-				Column_6: true,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 2418272691,
-				BelongsActiveSkills: [],
-				Category: 6,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'base_projectile_speed_+%',
-				Column_1: false,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 1,
-				Text: 'Base Projectile Speed +%',
-				Column_6: false,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 3047699552,
-				BelongsActiveSkills: [],
-				Category: 6,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'number_of_chains',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 3,
-				Text: 'Additional Chains',
-				Column_6: true,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 860057348,
-				BelongsActiveSkills: [],
-				Category: 18,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'projectiles_nova',
-				Column_1: false,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 4,
-				Text: '',
-				Column_6: true,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 2089528950,
-				BelongsActiveSkills: [],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: false,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'number_of_additional_projectiles',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 3,
-				Text: 'Additional Projectiles',
-				Column_6: true,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 2418272691,
-				BelongsActiveSkills: [],
-				Category: 6,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'skill_effect_duration_+%',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 1,
-				Text: 'Skill Duration',
-				Column_6: true,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 183850661,
-				BelongsActiveSkills: [],
-				Category: 18,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'totems_from_this_skill_grant_totemified_lightning_tendrils_larger_pulse_interval_-X_to_parent',
-				Column_1: true,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 3,
-				Text: '',
-				Column_6: false,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 2041474159,
-				BelongsActiveSkills: [],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			},
-			{
-				Id: 'totemified_skill_effect_duration_+%',
-				Column_1: false,
-				IsLocal: false,
-				IsWeaponLocal: false,
-				Semantic: 1,
-				Text: '',
-				Column_6: true,
-				IsVirtual: false,
-				MainHandAlias_Stat: null,
-				OffHandAlias_Stat: null,
-				Column_10: true,
-				HASH32: 312466241,
-				BelongsActiveSkills: [],
-				Category: null,
-				Column_14: false,
-				Column_15: false,
-				IsScalable: true,
-				ContextFlags: [],
-				DotFlag: [],
-				WeaponHandCheck: false
-			}
-		],
-		MinionActiveSkillTypes: [],
-		Column_18: true,
-		isGem: true,
-		SecondarySkillSpecificStats: [],
-		SkillMine: 8,
-		AlternateSkillTargetingBehaviour: {
-			Id: 'ConsoleAtFeetNormalSelfcast',
-			Column_1: 0,
-			ClientStrings: 4714,
-			Column_3: 5,
-			Column_4: 5,
-			Column_5: 5,
-			Column_6: [0, 3]
-		},
-		Column_23: false,
-		AIFile: '',
-		StatContextFlags: [
-			{
-				Id: 'SpellHit',
-				Column_1: 0
-			},
-			{
-				Id: 'HitGeneral',
-				Column_1: 0
-			},
-			{
-				Id: 'BaseDamage',
-				Column_1: 0
-			},
-			{
-				Id: 'Damage',
-				Column_1: 0
-			},
-			{
-				Id: 'DamageFinal',
-				Column_1: 0
-			},
-			{
-				Id: 'DamageOverTime',
-				Column_1: 0
-			},
-			{
-				Id: 'DotMultiplier',
-				Column_1: 0
-			},
-			{
-				Id: 'Leech',
-				Column_1: 0
-			},
-			{
-				Id: 'Conversion',
-				Column_1: 0
-			},
-			{
-				Id: 'BaseSpellDamage',
-				Column_1: 0
-			},
-			{
-				Id: 'SpellDamage',
-				Column_1: 0
-			},
-			{
-				Id: 'SpellDamageFinal',
-				Column_1: 0
-			}
-		],
-		Column_26: false,
-		Column_27: false,
-		Column_28: true,
-		ShapeShiftForm: null,
-		VideoClip: 'Art/Videos/SkillExamples/Spark.bk2',
-		CharacterAudioEvent: null,
-		AiScript: 'Metadata/Monsters/Companions/AIScripts/Generic.ais',
-		MinionType: null,
-		Column_34: null,
-		Column_35: '',
-		Column_36: false,
-		StatDescriptionType: 1,
-		StatDescription: 'Metadata/StatDescriptions/specific_skill_stat_descriptions/spark/'
-	};
 
 	// Interface for the skill data
 	interface ActiveSkillData {
@@ -645,14 +39,23 @@
 			.trim();
 	}
 
-	// Function to get the granted effect from the ID
+	// Function to get the cast time from the granted effect
 	function getCastTime(id: string): string {
 		const effect = grantedEffects.find((effect) => effect.Id === id);
-		console.log('Index of Effect:', grantedEffects.indexOf(effect));
-		// console.log(grantedEffectsPerLevel[grantedEffects.indexOf(effect)]);
-		// getGrantedEffectPerLevel(grantedEffects.indexOf(effect));
 
-		if (!effect) return effect.CastTime;
+		// Check if the effect exists
+		if (!effect) {
+			console.warn(`⚠️ No cast time found for ID: ${id}`);
+			return 'N/A'; // Default fallback if effect is missing
+		}
+
+		// Check if CastTime exists and is a valid number
+		if (typeof effect.CastTime !== 'number' || isNaN(effect.CastTime)) {
+			console.warn(`⚠️ CastTime is missing or invalid for effect ID: ${id}`);
+			return 'N/A'; // Default fallback if CastTime is invalid
+		}
+
+		// Safely return formatted CastTime
 		const castTime = effect.CastTime / 1000;
 		return castTime.toFixed(2);
 	}
@@ -807,6 +210,10 @@
 			return;
 		}
 
+		// Clear processed stats for each new set
+		processedStats.clear();
+		processedBlocks.clear();
+
 		console.log(`🔄 Processing ${type}:`, statsArray);
 
 		statsArray.forEach((stat, index) => {
@@ -821,12 +228,14 @@
 			if (block) {
 				// Check if the block was already processed
 				const blockKey = block.stats.join('|'); // Unique key for the block
+
 				if (processedBlocks.has(blockKey)) {
 					console.warn(`⚠️ Block already processed: "${blockKey}"`);
 					return;
 				}
-				processedBlocks.add(blockKey); // Mark block as processed
 
+				// Ensure we don't mark the block as processed prematurely
+				// Only add it after a successful match
 				processedStats.add(statId);
 
 				console.log(`✅ Matched ${type} Stats: "${block.stats.join(', ')}"`);
@@ -840,60 +249,34 @@
 					statCount = parseInt(statMatch[1], 10); // Extract stat count from prefix
 				}
 
-				// Slice the relevant stats and values
+				// Ensure we slice correctly for multi-stat handling
 				const relevantStats = block.stats.slice(0, statCount);
 				const relevantValues = valuesArray.slice(index, index + statCount);
 
-				// Match the relevant stat with the block.description based on the index of the stat
-				console.log('relevantStats', relevantStats);
+				console.log('📊 relevantStats:', relevantStats);
+				console.log('📊 relevantValues:', relevantValues);
 
-				// Flatten the relevant stats into a single array of IDs
-				const relevantStatsArray = relevantStats.flatMap(
-					(stat) => stat.split(' ').slice(1) // Remove prefixes and keep stat IDs
-				);
-				console.log('relevantStatsArray (flattened)', relevantStatsArray);
-
-				// Match descriptions based on stats count and placeholders
-				const matchedDescription =
+				// Match the description
+				let matchedDescription =
 					block.descriptions.find((description) => {
-						// Match multi-stat patterns
-						const match = description.match(/^# #\s+"(.+)"$/);
-						if (match) {
-							console.log('Matched Multi-Stat Pattern', match[1]);
-							return true;
-						}
+						return description.includes('{0}') && description.includes('{1}');
+					}) || block.descriptions[0]; // Fallback to the first description
 
-						// Match single-stat patterns
-						const indexMatch = description.match(/^(\d+)\|#(?:\s(\d+))?/);
-						if (indexMatch) {
-							const blockIndex = parseInt(indexMatch[2] || '0', 10);
-							console.log('blockIndex', blockIndex);
-							return blockIndex === index; // Compare with current stat index
-						}
+				console.log('📝 Matched Description:', matchedDescription);
 
-						return false;
-					}) || '';
-
-				console.log('matchedDescription', matchedDescription);
-
-				// Handle Multi-Stat Placeholders
+				// Ensure placeholders {0} and {1} are correctly replaced
 				let formattedDescription = matchedDescription;
 
-				// Handle multiple stats (e.g., min and max damage)
 				if (matchedDescription.includes('{0}') && matchedDescription.includes('{1}')) {
-					// Extract multiple values for replacements
-					const relevantValues = valuesArray.slice(index, index + relevantStatsArray.length);
-					console.log('relevantValues (for multi-stat replacement)', relevantValues);
-
 					formattedDescription = formatDescription(matchedDescription, relevantValues.map(String));
 				} else {
-					// Fallback to single replacement if only one stat
+					// Fallback to single value replacement if {0} or {1} is missing
 					formattedDescription = formatDescription(matchedDescription, [
 						valuesArray[index]?.toString() || ''
 					]);
 				}
 
-				// Handle Semantic formatting
+				// Apply Semantic formatting
 				relevantValues.forEach((value, i) => {
 					switch (stat.Semantic) {
 						case 1:
@@ -910,6 +293,9 @@
 					}
 				});
 
+				// Only mark as processed after successful formatting
+				processedBlocks.add(blockKey);
+
 				console.log(`📝 Formatted ${type} Description: "${formattedDescription}"`);
 			} else {
 				console.warn(`❌ No description found for ${type} ID: ${statId}`);
@@ -917,7 +303,7 @@
 		});
 	}
 
-	async function getStatDescriptions(path: string) {
+	async function getStatDescriptions(path: string, skillId: string) {
 		const { patchUrl } = await fetchVersion(fetch, gameVersion);
 		const statDescriptions = await fetchStatDescriptions(fetch, patchUrl, path);
 
@@ -926,10 +312,10 @@
 		console.log('📦 Parsed Blocks:', parsedBlocks);
 
 		// Find the relevant stat set for this skill
-		const statSet = grantedEffectsStatSetsPerLevel.find((set) => set.StatSet.Id === 'SparkPlayer');
+		const statSet = grantedEffectsStatSetsPerLevel.find((set) => set.StatSet.Id === skillId);
 
 		if (!statSet) {
-			console.warn('❌ No StatSet found for SparkPlayer.');
+			console.warn('❌ No StatSet found for skill ID:', skillId);
 			return;
 		}
 
@@ -971,13 +357,38 @@
 
 		// Retrieve data from the store
 		// TODO: remove mockData
-		// const storeData = get(rowStore);
-		const storeData = mockData;
+		const storeData = get(rowStore);
+		if (!rowStore) {
+			console.warn('No row data found in the store.');
+			message = 'No data available for export.';
+			return;
+		}
+		// const storeData = mockData;
 		console.log('Store Data:', storeData);
 
-		let path = storeData.StatDescription;
+		let path = storeData?.StatDescription;
+		let skillId = storeData?.GrantedEffect;
+		// console.log('Skill ID:', skillId);
 
-		await getStatDescriptions(path);
+		// if (skillId && !skillId.includes('Player')) {
+		//   skillId = `${skillId}Player`;
+		// }
+
+		// loop through the grantedEffects to find the correct skillId
+		grantedEffects.forEach((effect) => {
+			try {
+        if (effect.ActiveSkill.Id.includes(skillId)) {
+          console.log('Found matching skillId:', effect.Id);          
+          skillId = effect.Id;
+        }
+			} catch (error) {
+				// console.log('No ActiveSkill found for effect:', effect.Id);
+        console.warn('No ActiveSkill found for effect:', skillId);
+			}
+		});
+
+		// TODO: continue here!
+		await getStatDescriptions(path, skillId);
 
 		if (storeData) {
 			rowData = storeData;
