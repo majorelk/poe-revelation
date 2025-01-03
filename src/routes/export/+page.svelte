@@ -39,13 +39,13 @@
 			.trim();
 	}
 
-  // Function to get the cast time from the granted effect
+	// Function to get the cast time from the granted effect
 	function getCastTime(id: string): string {
 		const effect = grantedEffects.find((effect) => effect.Id === id);
 
 		// Check if the effect exists
 		if (!effect) {
-			console.warn(`⚠️ No granted effect found for ID: ${id}`);
+			console.warn(`⚠️ No cast time found for ID: ${id}`);
 			return 'N/A'; // Default fallback if effect is missing
 		}
 
@@ -309,7 +309,7 @@
 
 		// Parse descriptions into structured blocks
 		const parsedBlocks = parseStatDescriptions(statDescriptions);
-		console.log('📦 Parsed Blocks:', parsedBlocks);    
+		console.log('📦 Parsed Blocks:', parsedBlocks);
 
 		// Find the relevant stat set for this skill
 		const statSet = grantedEffectsStatSetsPerLevel.find((set) => set.StatSet.Id === skillId);
@@ -368,13 +368,26 @@
 
 		let path = storeData?.StatDescription;
 		let skillId = storeData?.GrantedEffect;
+		// console.log('Skill ID:', skillId);
 
-    if (skillId && !skillId.includes('Player')) {
-      skillId = `${skillId}Player`;
-    }
+		// if (skillId && !skillId.includes('Player')) {
+		//   skillId = `${skillId}Player`;
+		// }
 
+		// loop through the grantedEffects to find the correct skillId
+		grantedEffects.forEach((effect) => {
+			try {
+        if (effect.ActiveSkill.Id.includes(skillId)) {
+          console.log('Found matching skillId:', effect.Id);          
+          skillId = effect.Id;
+        }
+			} catch (error) {
+				// console.log('No ActiveSkill found for effect:', effect.Id);
+        console.warn('No ActiveSkill found for effect:', skillId);
+			}
+		});
 
-    // TODO: continue here!
+		// TODO: continue here!
 		await getStatDescriptions(path, skillId);
 
 		if (storeData) {
