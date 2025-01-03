@@ -4,6 +4,7 @@
 	import { fetchVersion } from '$lib/utils/fetchVersion.js';
 	import { mockData } from '$lib/utils/mockDataSpark.js';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 
 	let message = 'Export completed!';
 	let rowData: any = {};
@@ -17,8 +18,6 @@
 	const grantedEffectsStatSetsPerLevel = data?.allData.GrantedEffectStatSetsPerLevel?.rows || [];
 	// TODO: do we need this?
 	// const grantedEffectsPerLevel = data?.allData.GrantedEffectsPerLevel?.rows || [];
-
-
 
 	// Interface for the skill data
 	interface ActiveSkillData {
@@ -202,6 +201,10 @@
 			return;
 		}
 
+		// Clear processed stats for each new set
+		processedStats.clear();
+		processedBlocks.clear();
+
 		console.log(`🔄 Processing ${type}:`, statsArray);
 
 		statsArray.forEach((stat, index) => {
@@ -235,60 +238,66 @@
 					statCount = parseInt(statMatch[1], 10); // Extract stat count from prefix
 				}
 
+				// Before slicing the relevant stats and values
+				const isSingleStatWithNegate = block.descriptions.some((description) =>
+					description.includes('negate')
+				);
+
+				let matchedDescription = '';
+				let statValue = valuesArray[index];
+				let statValueAsNumber = Number(statValue); // Ensure numeric comparison
+
+				if (isSingleStatWithNegate) {
+					console.log('⚖️ Handling polarity-based descriptions');
+
+					// Separate positive and negative descriptions
+					const positiveDescription = block.descriptions.find((desc) => !desc.includes('negate'));
+					const negativeDescription = block.descriptions.find((desc) => desc.includes('negate'));
+
+					// Select description based on value polarity
+					if (statValueAsNumber >= 0 && positiveDescription) {
+						console.log('✅ Positive value detected, using positive description');
+						matchedDescription = positiveDescription;
+					} else if (statValueAsNumber < 0 && negativeDescription) {
+						console.log('🛑 Negative value detected, using negative description');
+						matchedDescription = negativeDescription;
+					} else {
+						console.warn('⚠️ No matching description for value polarity');
+					}
+				}
+
 				// Slice the relevant stats and values
 				const relevantStats = block.stats.slice(0, statCount);
 				const relevantValues = valuesArray.slice(index, index + statCount);
 
-				// Match the relevant stat with the block.description based on the index of the stat
-				console.log('relevantStats', relevantStats);
+				// If no specific polarity-based description was selected, fallback to standard matching
+				if (!matchedDescription) {
+					matchedDescription =
+						block.descriptions.find((description) => {
+							const match = description.match(/^(\d+)\|#(?:\s(\d+))?/);
+							if (match) {
+								const blockIndex = parseInt(match[2] || '0', 10);
+								return blockIndex === index;
+							}
+							return false;
+						}) || '';
+				}
 
-				// Flatten the relevant stats into a single array of IDs
-				const relevantStatsArray = relevantStats.flatMap(
-					(stat) => stat.split(' ').slice(1) // Remove prefixes and keep stat IDs
-				);
-				console.log('relevantStatsArray (flattened)', relevantStatsArray);
-
-				// Match descriptions based on stats count and placeholders
-				const matchedDescription =
-					block.descriptions.find((description) => {
-						// Match multi-stat patterns
-						const match = description.match(/^# #\s+"(.+)"$/);
-						if (match) {
-							console.log('Matched Multi-Stat Pattern', match[1]);
-							return true;
-						}
-
-						// Match single-stat patterns
-						const indexMatch = description.match(/^(\d+)\|#(?:\s(\d+))?/);
-						if (indexMatch) {
-							const blockIndex = parseInt(indexMatch[2] || '0', 10);
-							console.log('blockIndex', blockIndex);
-							return blockIndex === index; // Compare with current stat index
-						}
-
-						return false;
-					}) || '';
-
-				console.log('matchedDescription', matchedDescription);
+				console.log('📝 Final Matched Description:', matchedDescription);
 
 				// Handle Multi-Stat Placeholders
 				let formattedDescription = matchedDescription;
 
-				// Handle multiple stats (e.g., min and max damage)
 				if (matchedDescription.includes('{0}') && matchedDescription.includes('{1}')) {
-					// Extract multiple values for replacements
-					const relevantValues = valuesArray.slice(index, index + relevantStatsArray.length);
-					console.log('relevantValues (for multi-stat replacement)', relevantValues);
-
-					formattedDescription = formatDescription(matchedDescription, relevantValues.map(String));
+					const multiStatValues = valuesArray.slice(index, index + relevantStats.length);
+					formattedDescription = formatDescription(matchedDescription, multiStatValues.map(String));
 				} else {
-					// Fallback to single replacement if only one stat
 					formattedDescription = formatDescription(matchedDescription, [
 						valuesArray[index]?.toString() || ''
 					]);
 				}
 
-				// Handle Semantic formatting
+				// Apply Semantic formatting
 				relevantValues.forEach((value, i) => {
 					switch (stat.Semantic) {
 						case 1:
@@ -312,7 +321,7 @@
 		});
 	}
 
-	async function getStatDescriptions(path: string) {
+	async function getStatDescriptions(path: string, skillId: string) {
 		const { patchUrl } = await fetchVersion(fetch, gameVersion);
 		const statDescriptions = await fetchStatDescriptions(fetch, patchUrl, path);
 
@@ -321,10 +330,10 @@
 		console.log('📦 Parsed Blocks:', parsedBlocks);
 
 		// Find the relevant stat set for this skill
-		const statSet = grantedEffectsStatSetsPerLevel.find((set) => set.StatSet.Id === 'SparkPlayer');
+		const statSet = grantedEffectsStatSetsPerLevel.find((set) => set.StatSet.Id === skillId);
 
 		if (!statSet) {
-			console.warn('❌ No StatSet found for SparkPlayer.');
+      console.warn('❌ No StatSet found for skill ID:', skillId);
 			return;
 		}
 
@@ -366,13 +375,18 @@
 
 		// Retrieve data from the store
 		// TODO: remove mockData
-		// const storeData = get(rowStore);
-		const storeData = mockData
+		const storeData = get(rowStore);
+		if (!rowStore) {
+			console.warn('No row data found in the store.');
+			message = 'No data available for export.';
+			return;
+		}
+		// const storeData = mockData;
 		console.log('Store Data:', storeData);
 
-		let path = storeData.StatDescription;
-
-		await getStatDescriptions(path);
+		let path = storeData?.StatDescription;
+    let skillId = storeData?.GrantedEffect;
+		await getStatDescriptions(path, skillId);
 
 		if (storeData) {
 			rowData = storeData;
