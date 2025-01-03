@@ -2,9 +2,10 @@ import { purgeCss } from 'vite-plugin-tailwind-purgecss';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import path from 'path';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 export default defineConfig({
-  plugins: [sveltekit(), purgeCss()],
+  plugins: [sveltekit(), purgeCss(), svelte()],
   build: {
     target: 'esnext',
   },
@@ -25,5 +26,9 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src')
     }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
   },
 });
